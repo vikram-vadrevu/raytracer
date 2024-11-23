@@ -71,7 +71,7 @@ impl Scene {
                 minimum_intersection = Some(i);
             }
         }
-
+        println!("Minimum intersection: {:?}", minimum_intersection);
         minimum_intersection
     }
 
@@ -82,10 +82,10 @@ impl Scene {
         let primary_colision: IntersectionPayload = self.find_minimum_intersection(ray);
 
         if primary_colision.is_none() {
-            return MatVec::new(vec![0.0, 0.0, 0.0, 1.0]);
+            return MatVec::new(vec![0.0, 0.0, 0.0, 0.0]);
         }
 
-        let shape_id = primary_colision.as_ref().unwrap().shape_id.unwrap();
+        let shape_id: usize = primary_colision.as_ref().unwrap().shape_id.unwrap();
         let color: RGBA = self.shapes[shape_id].color_at(&primary_colision.as_ref().unwrap().point);
 
         if bounce_limit > 1 {
@@ -95,9 +95,8 @@ impl Scene {
             todo!("Secondary rays not yet implemented");
         }
         
-        
         let ilumination_sources: Vec<LightResidual> = self._find_light_sources(primary_colision.as_ref().unwrap());
-        
+        // let total_light_contribution: MatVec = self._attenuate_light(ilumination_sources);
         // In a shadow
         if ilumination_sources.is_empty() {
             return MatVec::new(vec![0.0, 0.0, 0.0, 1.0]);

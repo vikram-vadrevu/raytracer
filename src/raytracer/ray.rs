@@ -24,13 +24,13 @@ impl Ray {
         pub fn generate_primary_ray(through_pixel: MatVec, context: &CameraState) -> Ray {
             match context.projection {
                 ProjectionType::FLAT => {
-                    let s_x: f32 = (2.0*through_pixel[0] - context.width as f32) / u32::max(context.width, context.height) as f32;
-                    let s_y: f32 = (context.height as f32 - 2.0*through_pixel[1]) / u32::max(context.width, context.height) as f32;
+                    let s_x: f32 = (2.0*through_pixel[0] - context.width as f32) / (u32::max(context.width, context.height) as f32);
+                    let s_y: f32 = (context.height as f32 - 2.0*through_pixel[1]) / (u32::max(context.width, context.height) as f32);
                     let eye: MatVec = context.eye.clone();
                     let forward: MatVec = context.forward.clone();
                     let up: MatVec = context.up.normalize();
                     let right: MatVec = forward.cross(&up).normalize();
-                    Ray::new(eye, forward + s_x*right + s_y*up)
+                    Ray::new(eye, (forward + s_x*right + s_y*up).normalize())
                 },
                 _ => todo!("Projection type {:?} is not yet supported", context.projection),
             }

@@ -53,8 +53,10 @@ impl RayTracer {
         }
 
         let _magic_num: String = header_parts[0].clone();
-        let width: u32 = header_parts[1].parse().unwrap();
-        let height: u32 = header_parts[2].parse().unwrap();
+        // let width: u32 = header_parts[1].parse().unwrap();
+        // let height: u32 = header_parts[2].parse().unwrap();
+        let height: u32 = header_parts[1].parse().unwrap();
+        let width: u32 = header_parts[2].parse().unwrap();
         let out_file: String = header_parts[3].clone();
 
         let mut raytracer = RayTracer::new(width, height);        
@@ -95,16 +97,19 @@ impl RayTracer {
     pub fn render(&mut self) -> bool {
         for x in 0..self.width {
             for y in 0..self.height {
-
+                
                 let ray = Ray::generate_primary_ray(MatVec::new(vec![x as f32, y as f32]), &self.camera);
-                print!("Ray: {:?}", ray);
+                // print!("Ray: {:?}", ray);
                 // calculate an intersection, from that intersection build out a recursive residual
                 let pixel_color = self.scene.trace_through_scene(&ray, self.bounce_limit);
 
-                self.image.put_pixel(x, y, image::Rgba([pixel_color.get(0).clone() as u8,
-                                                               pixel_color.get(1).clone() as u8,
-                                                               pixel_color.get(2).clone() as u8,
-                                                               255]));
+                // self.image.put_pixel(x, y, image::Rgba([pixel_color.get(0).clone() as u8,
+                //                                                pixel_color.get(1).clone() as u8,
+                //                                                pixel_color.get(2).clone() as u8,
+                //                                                0]));
+
+                self.image.put_pixel(x, y, pixel_color.to_rgba());
+
                 // calculate and intersection point
                 // if secondary bounce, execute that action and return a color
                 // trace back light sources for the intersection point

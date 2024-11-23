@@ -18,3 +18,17 @@ pub fn compute_total_light(ilumination_sources: Vec<LightResidual>) -> Light {
 pub fn lambert(base_color: Light, ilumination_sources: Vec<LightResidual>) -> Light {
     todo!("lambert, Not yet implemented");
 }
+
+pub fn round_precision(value: f32, precision: f32) -> f32 {
+    let rounded_value = (value / precision).round() * precision;
+    if (value - rounded_value).abs() < precision {
+        rounded_value
+    } else {
+        value
+    }
+}
+
+#[inline(always)]
+pub fn fuzzy_eq(a: f32, b: f32, epsilon: f32) -> bool {
+    (a - b).abs() < epsilon
+}

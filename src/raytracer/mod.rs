@@ -100,6 +100,14 @@ impl MatVec {
         MatVec::new(new_data)
     }
 
+    pub fn magnitude(&self) -> f32 {
+        let mut sum = 0.0;
+        for i in 0..self.len() {
+            sum += self.get(i) * self.get(i);
+        }
+        sum.sqrt()
+    }
+
     pub fn cross(&self, other: &MatVec) -> MatVec {
         if self.len() == 3 {
             return self._cross3x3(other);
@@ -122,6 +130,25 @@ impl MatVec {
             clipped.push(val as u8);
         }
         clipped
+    }
+
+    // Computes the rgba vector from a MatVec with values from 0.0 to 1.0
+    pub fn to_rgba(&self) -> image::Rgba<u8> {
+        if self.len() == 4 {
+            return image::Rgba([(*self.get(0) * 255.0) as u8,
+                                (*self.get(1) * 255.0) as u8,
+                                (*self.get(2) * 255.0) as u8,
+                                (*self.get(3) * 255.0) as u8]);
+        }
+        else if self.len() == 3 {
+            return image::Rgba([(*self.get(0) * 255.0) as u8,
+                                (*self.get(1) * 255.0) as u8,
+                                (*self.get(2) * 255.0) as u8,
+                                255 as u8]);
+        }
+        else {
+            panic!("MatVec::to_rgba, Invalid length for MatVec");
+        }
     }
 
 }
@@ -169,7 +196,6 @@ impl Mul<MatVec> for MatVec {
     }
 }
 
-
 impl Index<usize> for MatVec {
     type Output = f32;
 
@@ -178,7 +204,7 @@ impl Index<usize> for MatVec {
     }
 }
 
-
+#[derive(Debug)]
 pub struct Intersection {
 
     pub shape_id: Option<usize>, // Index of the shape in the scene
@@ -249,7 +275,7 @@ impl CameraState {
             width,
             height,
             position: MatVec::new(vec![0.0, 0.0, 0.0]),
-            forward: MatVec::new(vec![0.0, 0.0, 1.0]),
+            forward: MatVec::new(vec![0.0, 0.0, -1.0]),
             up: MatVec::new(vec![0.0, 1.0, 0.0]),
             eye: MatVec::new(vec![0.0, 0.0, 0.0]),
             exposure: None,

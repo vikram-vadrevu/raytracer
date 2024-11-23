@@ -5,7 +5,7 @@ build:
 
 # Cargo will automatically rebuild the project when run with debug profile
 debug:
-	cargo run --debug $(file)
+	cargo run $(file)
 
 run:
 	cargo run --release $(file)
