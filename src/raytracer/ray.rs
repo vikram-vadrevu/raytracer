@@ -4,14 +4,14 @@ use super::scene::{LightSource, Scene, SceneObject};
 #[derive(Debug)]
 pub struct Ray {
 
-    pub origin: MatVec,
-    pub direction: MatVec,
+    pub origin: MatVec<3>,
+    pub direction: MatVec<3>,
 
 }
 
 impl Ray {
     
-        pub fn new(origin: MatVec, direction: MatVec) -> Ray {
+        pub fn new(origin: MatVec<3>, direction: MatVec<3>) -> Ray {
             Ray {
                 origin,
                 direction,
@@ -21,15 +21,15 @@ impl Ray {
         // through_pixel is a 2 element vector representing the NON-NORMALIZED
         // pixel coordinates. All conversions and projections should be applied
         // here.
-        pub fn generate_primary_ray(through_pixel: MatVec, context: &CameraState) -> Ray {
+        pub fn generate_primary_ray(through_pixel: MatVec<2>, context: &CameraState) -> Ray {
             match context.projection {
                 ProjectionType::FLAT => {
                     let s_x: f32 = (2.0*through_pixel[0] - context.width as f32) / (u32::max(context.width, context.height) as f32);
                     let s_y: f32 = (context.height as f32 - 2.0*through_pixel[1]) / (u32::max(context.width, context.height) as f32);
-                    let eye: MatVec = context.eye.clone();
-                    let forward: MatVec = context.forward.clone();
-                    let up: MatVec = context.up.normalize();
-                    let right: MatVec = forward.cross(&up).normalize();
+                    let eye: MatVec<3> = context.eye.clone();
+                    let forward: MatVec<3> = context.forward.clone();
+                    let up: MatVec<3> = context.up.normalize();
+                    let right: MatVec<3> = forward.cross(&up).normalize();
                     Ray::new(eye, (forward + s_x*right + s_y*up).normalize())
                 },
                 _ => todo!("Projection type {:?} is not yet supported", context.projection),
@@ -38,12 +38,12 @@ impl Ray {
 
         pub fn generate_light_ray(intersection: &Intersection, light_source: &Box<dyn LightSource>) -> Ray {
             let origin = intersection.point.clone();
-            let dir = light_source.compute_inverse_direction(&origin);
+            let dir = light_source.compute_direction(&origin);
 
             Ray::new(origin, dir)
         }
 
-        pub fn refract(&self, normal: &MatVec, ior: f32) -> MatVec {
+        pub fn refract(&self, normal: &MatVec<3>, ior: f32) -> MatVec<3> {
             let cos_i: f32 = -self.direction.dot(normal.clone());
             let sin_t2: f32 = ior.powi(2) * (1.0 - cos_i.powi(2));
             if sin_t2 > 1.0 {

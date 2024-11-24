@@ -5,13 +5,13 @@ use ray::Ray;
 // In needed, I will change this to be a 'Matrix Vector',
 // ie a matrix/tensor
 
-
 // #[derive(Debug)]
-pub struct MatVec {
-    data: Vec<f32>,
+pub struct MatVec<const N: usize> {
+    data: [f32; N],
+    // data: Vec<f32>,
 }
 
-impl Debug for MatVec {
+impl<const N: usize> Debug for MatVec<N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (i, value) in self.data.iter().enumerate() {
             writeln!(f, "data[{}]: {}", i, value)?;
@@ -20,27 +20,33 @@ impl Debug for MatVec {
     }
 }
 
-impl Clone for MatVec {
+impl<const N: usize> Clone for MatVec<N> {
     fn clone(&self) -> Self {
-        let mut new_vec: Vec<f32> = Vec::new();
-        for i in 0..self.data.len() {
-            new_vec.push(self.data[i]);
+        let mut new_data = [0.0f32; N];
+        for i in 0..N {
+            new_data[i] = self.data[i];
         }
-        MatVec {
-            data: new_vec,
+        MatVec::<N> {
+            data: new_data,
         }
     }
 }
 
-impl MatVec {
+impl<const N: usize> MatVec<N> {
 
-    pub fn new(data: Vec<f32>) -> MatVec {
-        MatVec {
-            data,
+    pub fn new(data: Vec<f32>) -> MatVec<N> {
+        assert_eq!(data.len(), N, "MatVec::new, Size missmatch");
+        let mut new_data = [0.0f32; N];
+        for i in 0..N {
+            new_data[i] = data[i];
+        }
+        MatVec::<N> {
+            data: new_data,
         }
     }
 
     pub fn get(&self, i: usize) -> &f32 {
+        assert!(i < N, "MatVec::get, Index out of bounds");
         &self.data[i]
     }
 
@@ -49,52 +55,52 @@ impl MatVec {
     }
 
     pub fn len(&self) -> usize {
-        self.data.len()
+        // self.data.len()
+        N
     }
 
-    pub fn dot(&self, other: MatVec) -> f32 {
-        assert_eq!(self.len(), other.len(), "Vectors must be of the same length");
+    pub fn dot(&self, other: MatVec::<N>) -> f32 {
         let mut sum = 0.0;
-        for i in 0..self.len() {
+        for i in 0..N {
             sum += self.get(i) * other.get(i);
         }
         sum
     }
 
-    fn _add(self, other: MatVec) -> MatVec {
-        assert_eq!(self.len(), other.len(), "Vectors must be of the same length");
+    fn _add(self, other: MatVec<N>) -> MatVec<N> {
+        // assert_eq!(self.len(), other.len(), "Vectors must be of the same length");
         let mut new_data = Vec::new();
-        for i in 0..self.len() {
+        for i in 0..N {
             new_data.push(self.get(i) + other.get(i));
         }
         MatVec::new(new_data)
     }
 
-    fn _sub(&self, other: MatVec) -> MatVec {
-        assert_eq!(self.len(), other.len(), "Vectors must be of the same length");
+    fn _sub(&self, other: MatVec<N>) -> MatVec<N> {
+        // assert_eq!(self.len(), other.len(), "Vectors must be of the same length");
         let mut new_data = Vec::new();
-        for i in 0..self.len() {
+        for i in 0..N {
             new_data.push(self.get(i) - other.get(i));
         }
         MatVec::new(new_data)
     }
 
-    pub fn scale(&self, scalar: f32) -> MatVec {
+    pub fn scale(&self, scalar: f32) -> MatVec<N> {
         let mut new_data = Vec::new();
-        for i in 0..self.len() {
+        for i in 0..N {
             new_data.push(self.get(i) * scalar);
         }
         MatVec::new(new_data)
     }
 
-    pub fn normalize(&self) -> MatVec {
+    pub fn normalize(&self) -> MatVec<N> {
         let mut new_data = Vec::new();
         let mut sum = 0.0;
-        for i in 0..self.len() {
+        for i in 0..N {
             sum += self.get(i) * self.get(i);
         }
         let mag = sum.sqrt();
-        for i in 0..self.len() {
+        for i in 0..N {
             new_data.push(self.get(i) / mag);
         }
         MatVec::new(new_data)
@@ -102,20 +108,21 @@ impl MatVec {
 
     pub fn magnitude(&self) -> f32 {
         let mut sum = 0.0;
-        for i in 0..self.len() {
+        for i in 0..N {
             sum += self.get(i) * self.get(i);
         }
         sum.sqrt()
     }
 
-    pub fn cross(&self, other: &MatVec) -> MatVec {
-        if self.len() == 3 {
+    pub fn cross(&self, other: &MatVec<N>) -> MatVec<N> {
+        if N == 3 {
             return self._cross3x3(other);
         }
         todo!("MatVec::cross, Not yet implemented for vectors of length {}", self.len());
     }
 
-    fn _cross3x3(&self, other: &MatVec) -> MatVec {
+    // TODO: Need to remove this function from here since it is only valid for 3D vectors
+    fn _cross3x3(&self, other: &MatVec<N>) -> MatVec <N>{
         assert!(self.len() == other.len(), "MatVec::cross, Size missmatch");
         let x = self.get(1) * other.get(2) - self.get(2) * other.get(1);
         let y = self.get(2) * other.get(0) - self.get(0) * other.get(2);
@@ -125,13 +132,14 @@ impl MatVec {
 
     pub fn clip_to_u8(&self) -> Vec<u8> {
         let mut clipped: Vec<u8> = Vec::new();
-        for i in 0..self.len() {
+        for i in 0..N {
             let val = self.get(i).max(0.0).min(255.0);
             clipped.push(val as u8);
         }
         clipped
     }
 
+    // TODO: Find a new home for this funcion since it is only valid for 4d vectors
     // Computes the rgba vector from a MatVec with values from 0.0 to 1.0
     pub fn to_rgba(&self) -> image::Rgba<u8> {
         if self.len() == 4 {
@@ -153,50 +161,53 @@ impl MatVec {
 
 }
 
-impl Add for MatVec {
-    type Output = MatVec;
+impl<const N: usize> Add for MatVec<N> {
+    type Output = MatVec<N>;
 
-    fn add(self, other: MatVec) -> MatVec {
+    fn add(self, other: MatVec<N>) -> MatVec<N> {
         self._add(other)
     }
 }
 
-impl Sub for MatVec {
-    type Output = MatVec;
+impl<const N: usize> Sub for MatVec<N> {
+    type Output = MatVec<N>;
 
-    fn sub(self, other: MatVec) -> MatVec {
+    fn sub(self, other: MatVec<N>) -> MatVec<N> {
         self._sub(other)
     }
 }
 
 // M * k
-impl Mul<f32> for MatVec {
-    type Output = MatVec;
+impl<const N: usize> Mul<f32> for MatVec<N> {
+    type Output = MatVec<N>;
 
-    fn mul(self, scalar: f32) -> MatVec {
+    fn mul(self, scalar: f32) -> MatVec<N> {
         self.scale(scalar)
     }
 }
 
 // k * M
-impl Mul<MatVec> for f32 {
-    type Output = MatVec;
+impl<const N: usize> Mul<MatVec<N>> for f32 {
+    type Output = MatVec<N>;
 
-    fn mul(self, vec: MatVec) -> MatVec {
+    fn mul(self, vec: MatVec<N>) -> MatVec<N> {
         vec.scale(self)
     }
 }
 
-// M * M (dot product)
-impl Mul<MatVec> for MatVec {
-    type Output = f32;
+// NOTE: In general, its is probably not the best idea to
+// define the dot product as the standard multiplication for vector data types
 
-    fn mul(self, other: MatVec) -> f32 {
-        self.dot(other)
-    }
-}
+// // M * M (dot product)
+// impl<const N: usize> Mul<MatVec<N>> for MatVec<N> {
+//     type Output = f32;
+//
+//     fn mul(self, other: MatVec<N>) -> f32 {
+//         self.dot(other)
+//     }
+// }
 
-impl Index<usize> for MatVec {
+impl<const N: usize> Index<usize> for MatVec<N> {
     type Output = f32;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -208,20 +219,21 @@ impl Index<usize> for MatVec {
 pub struct Intersection {
 
     pub shape_id: Option<usize>, // Index of the shape in the scene
-    pub point: MatVec,   // Intersection point in the world coordinate frame
-    pub normal: MatVec,  // Normals with respect to the object in the world coordinate frame
+    pub point: MatVec<3>,   // Intersection point in the world coordinate frame
+    pub normal: MatVec<3>,  // Normals with respect to the object in the world coordinate frame
     pub distance: f32,   // Distance from the ray origin to the intersection point
     pub residual: bool,  // Indicates whether or not the intersection will result in a residual
 
 }
 
 pub type IntersectionPayload = Option<Intersection>;
-pub type RGBA = MatVec;
-pub type Light = MatVec;
+pub type RGBA = MatVec<4>;
+pub type Color = MatVec<3>;
+pub type Light = MatVec<3>;
 
 pub struct InputState {
 
-    color: MatVec,
+    color: Color,
     // texcoord: MatVec,
     // texture: String,
     // roughness: f32,
@@ -259,10 +271,10 @@ pub struct CameraState {
 
     pub width: u32,
     pub height: u32,
-    pub position: MatVec,
-    pub forward: MatVec,
-    pub up: MatVec,
-    pub eye: MatVec,
+    pub position: MatVec<3>,
+    pub forward: MatVec<3>,
+    pub up: MatVec<3>,
+    pub eye: MatVec<3>,
     pub exposure: Option<f32>,
     pub projection: ProjectionType,
 
@@ -287,9 +299,10 @@ impl CameraState {
 
 pub struct LightResidual {
     pub source_id: Option<usize>,
-    pub color: RGBA,
+    pub color: Color,
     pub intensity: f32,
     pub direction: Ray,
+    pub normal: MatVec<3>,
 }
 
 impl LightResidual {
@@ -300,6 +313,7 @@ impl LightResidual {
             color: MatVec::new(vec![0.0, 0.0, 0.0]),
             intensity: 0.0,
             direction: Ray::new(MatVec::new(vec![0.0, 0.0, 0.0]), MatVec::new(vec![0.0, 0.0, 0.0])),
+            normal: MatVec::new(vec![0.0,0.0,0.0]),
         }
     }
 }

@@ -1,9 +1,10 @@
-use super::{InputState, CameraState, MatVec, scene};
+use super::{scene, utils, CameraState, InputState, MatVec, Color, RGBA};
 use super::ray::Ray;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use image::{ImageBuffer, RgbaImage};
 use super::shapes::{*};
+use super::light_sources::{*};
 
 pub struct RayTracer {
 
@@ -12,7 +13,7 @@ pub struct RayTracer {
     width: u32,
     bounce_limit: u32,
     // other porperties
-    state: InputState,
+    input_state: InputState,
     image: RgbaImage,
     camera: CameraState,
 
@@ -29,7 +30,7 @@ impl RayTracer {
             height,
             width,
             bounce_limit : default_bounce_limit,
-            state : InputState::new(),
+            input_state : InputState::new(),
             image: ImageBuffer::new(width, height),
             camera : CameraState::new(width, height),
         }
@@ -70,8 +71,6 @@ impl RayTracer {
             let delimitted: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
             let action = delimitted[0].clone();
             let elements: Vec<String> = delimitted[1..delimitted.len()].to_vec();
-
-            println!("Action: {}", action);
             
             match action.as_str() {
                 "sphere" => {
@@ -80,8 +79,15 @@ impl RayTracer {
                                                   elements[2].parse().unwrap()]);
 
                     let radius = elements[3].parse().unwrap();
-                    let obj = Sphere::new(center, radius, &raytracer.state);
+                    let obj = Sphere::new(center, radius, &raytracer.input_state);
                     raytracer.scene.add_shape(Box::new(obj));
+                }
+                "sun" => {
+                    let direction = MatVec::new(vec![elements[0].parse().unwrap(),
+                                                  elements[1].parse().unwrap(),
+                                                  elements[2].parse().unwrap()]);
+                    let obj = Sun::new(direction, &raytracer.input_state);
+                    raytracer.scene.add_light_source(Box::new(obj));
                 }
                 _ => {
                     println!("Invalid action: {}", action);
@@ -101,14 +107,17 @@ impl RayTracer {
                 let ray = Ray::generate_primary_ray(MatVec::new(vec![x as f32, y as f32]), &self.camera);
                 // print!("Ray: {:?}", ray);
                 // calculate an intersection, from that intersection build out a recursive residual
-                let pixel_color = self.scene.trace_through_scene(&ray, self.bounce_limit);
+                let pixel_color: RGBA = self.scene.trace_through_scene(&ray, self.bounce_limit);
 
                 // self.image.put_pixel(x, y, image::Rgba([pixel_color.get(0).clone() as u8,
                 //                                                pixel_color.get(1).clone() as u8,
                 //                                                pixel_color.get(2).clone() as u8,
                 //                                                0]));
+                #[allow(non_snake_case)]
+                // let sRGB: MatVec = utils::sRGB(&pixel_color);
+                let sRGB = pixel_color;
 
-                self.image.put_pixel(x, y, pixel_color.to_rgba());
+                self.image.put_pixel(x, y, sRGB.to_rgba());
 
                 // calculate and intersection point
                 // if secondary bounce, execute that action and return a color

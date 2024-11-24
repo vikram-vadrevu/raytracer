@@ -1,21 +1,20 @@
-use crate::raytracer::{Intersection, IntersectionPayload, MatVec, RGBA};
+use crate::raytracer::{Intersection, IntersectionPayload, MatVec, RGBA, Color};
 use crate::raytracer::ray::Ray;
 use crate::raytracer::utils;
 
-use super::{Light, LightResidual};
+use super::{light_sources, Light, LightResidual};
 
 pub trait SceneObject {
     fn intersect(&self, ray: &Ray) -> IntersectionPayload;
-    fn normal(&self, point: &MatVec) -> MatVec;
-    fn color_at(&self, point: &MatVec) -> RGBA;
-    fn apply_dir_transform(&self, dir: &MatVec) -> MatVec;
-    fn apply_light_transform(&self, light: &MatVec) -> MatVec;
+    fn normal(&self, point: &MatVec<3>) -> MatVec<3>;
+    fn color_at(&self, point: &MatVec<3>) -> Color;
+    fn apply_dir_transform(&self, dir: &MatVec<3>) -> MatVec<3>;
+    fn apply_light_transform(&self, light: &MatVec<3>) -> MatVec<3>;
 }
 
 pub trait LightSource {
-    // Compute the -1 * direction vector from the light source to the point
-    fn compute_inverse_direction(&self, origin: &MatVec) -> MatVec;
-    fn light_color(&self) -> RGBA;
+    fn compute_direction(&self, origin: &MatVec<3>) -> MatVec<3>;
+    fn light_color(&self) -> Color;
     fn intensity(&self, ray: &Ray) -> f32;
     // fn position(&self) -> MatVec;
     // fn color(&self) -> RGBA;
@@ -28,6 +27,7 @@ pub struct Scene {
 }
 
 impl Scene {
+
     pub fn new() -> Scene {
         Scene {
             shapes: Vec::new(),
@@ -38,6 +38,10 @@ impl Scene {
 
     pub fn add_shape(&mut self, shape: Box<dyn SceneObject>) {
         self.shapes.push(shape);
+    }
+
+    pub fn add_light_source(&mut self, light_source: Box<dyn LightSource>) {
+        self.light_sources.push(light_source);
     }
 
     pub fn find_any_intersection(&self, ray: &Ray) -> IntersectionPayload {
@@ -71,7 +75,7 @@ impl Scene {
                 minimum_intersection = Some(i);
             }
         }
-        println!("Minimum intersection: {:?}", minimum_intersection);
+        // println!("Minimum intersection: {:?}", minimum_intersection);
         minimum_intersection
     }
 
@@ -86,7 +90,7 @@ impl Scene {
         }
 
         let shape_id: usize = primary_colision.as_ref().unwrap().shape_id.unwrap();
-        let color: RGBA = self.shapes[shape_id].color_at(&primary_colision.as_ref().unwrap().point);
+        let color: Color = self.shapes[shape_id].color_at(&primary_colision.as_ref().unwrap().point);
 
         if bounce_limit > 1 {
             // cast secondary rays
@@ -101,11 +105,11 @@ impl Scene {
         if ilumination_sources.is_empty() {
             return MatVec::new(vec![0.0, 0.0, 0.0, 1.0]);
         }
-
-        return utils::lambert(color, ilumination_sources);
+        println!("Labert light calculation {:?}", utils::lambert(&color, &ilumination_sources));
+        return utils::lambert(&color, &ilumination_sources);
     }
 
-    fn _recursive_trace_through_scene(intersection: Intersection, bounce_limit: u32) -> Intersection {
+    fn _recursive_trace_through_scene(intersection: &Intersection, bounce_limit: u32) -> Intersection {
         // cast secondary rays
         // for each light source, calculate a ray to the light source
         // and check the scene for intersections, if intersected, apply shadow and return
@@ -113,23 +117,25 @@ impl Scene {
     }
 
     // Returns all light sources that illuminate an intersection
-    fn _find_light_sources(&self, Intersection: &Intersection) -> Vec<LightResidual> {
+    fn _find_light_sources(&self, primary_intersection: &Intersection) -> Vec<LightResidual> {
         let mut light_sources: Vec<LightResidual> = Vec::new();
-        for (i, light_source) in self.light_sources.iter().enumerate() {
+        for (_i, light_source) in self.light_sources.iter().enumerate() {
             let mut current_residual = LightResidual::new();
-            let light_ray = Ray::generate_light_ray(&Intersection, light_source);
+            let light_ray = Ray::generate_light_ray(&primary_intersection, light_source);
             let intersection = self.find_any_intersection(&light_ray);
             if intersection.is_none() {
                 current_residual.color = light_source.light_color();
                 current_residual.intensity = light_source.intensity(&light_ray);
                 current_residual.direction = light_ray.inverse();
+                current_residual.normal = primary_intersection.normal.clone();
+                light_sources.push(current_residual);
             }
         }
         light_sources
     }
 
     // fn _recursive_resolve_residual() -> ColisionRedisual {
-        
+    //
     // }
 
 }

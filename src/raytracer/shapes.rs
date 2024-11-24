@@ -1,17 +1,17 @@
-use crate::raytracer::{MatVec, InputState, Intersection, IntersectionPayload, RGBA};
+use crate::raytracer::{MatVec, InputState, Intersection, IntersectionPayload, RGBA, Color};
 use crate::raytracer::scene::SceneObject;
 use crate::raytracer::ray::Ray;
 use crate::raytracer::utils;
 
 pub struct Sphere {
-    pub center: MatVec,
+    pub center: MatVec<3>,
     pub radius: f32,
-    pub color: RGBA,
+    pub color: Color,
     // pub material: Material,
 }
 
 impl Sphere {
-    pub fn new(center: MatVec, radius: f32, context: &InputState) -> Sphere {
+    pub fn new(center: MatVec<3>, radius: f32, context: &InputState) -> Sphere {
         println!("Making sphere with center: {:?}, radius: {:?}, color: {:?}", center, radius, context.color);
         Sphere {
             center,
@@ -60,8 +60,8 @@ impl SceneObject for Sphere {
             tc - t_offset
         };
 
-        let intersection_point: MatVec = ray.origin.clone() + t * ray.direction.clone();
-        let normal: MatVec = (intersection_point.clone() - self.center.clone()).normalize();
+        let intersection_point: MatVec<3> = ray.origin.clone() + t * ray.direction.clone();
+        let normal: MatVec<3> = (intersection_point.clone() - self.center.clone()).normalize();
 
         Some(Intersection {
             shape_id: None,
@@ -100,14 +100,14 @@ impl SceneObject for Sphere {
 
     }
 
-    fn normal(&self, point: &MatVec) -> MatVec {
+    fn normal(&self, point: &MatVec<3>) -> MatVec<3> {
         // (point - self.center).normalize()
         MatVec::new(vec![0.0])
     }
-    fn color_at(&self, point: &MatVec) -> RGBA {
+    fn color_at(&self, point: &MatVec<3>) -> Color {
         self.color.clone()
     }
-    fn apply_dir_transform(&self, dir: &MatVec) -> MatVec {todo!("apply_dir_transform not implemented")}
-    fn apply_light_transform(&self, light: &MatVec) -> MatVec {todo!("apply_light_transform not implemented")}
+    fn apply_dir_transform(&self, dir: &MatVec<3>) -> MatVec<3> {todo!("apply_dir_transform not implemented")}
+    fn apply_light_transform(&self, light: &MatVec<3>) -> MatVec<3> {todo!("apply_light_transform not implemented")}
 
 }
