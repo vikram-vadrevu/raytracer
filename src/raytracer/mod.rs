@@ -301,7 +301,7 @@ pub struct LightResidual {
     pub source_id: Option<usize>,
     pub color: Color,
     pub intensity: f32,
-    pub direction: Ray,
+    pub direction: MatVec<3>,
     pub normal: MatVec<3>,
 }
 
@@ -312,7 +312,8 @@ impl LightResidual {
             source_id: None,
             color: MatVec::new(vec![0.0, 0.0, 0.0]),
             intensity: 0.0,
-            direction: Ray::new(MatVec::new(vec![0.0, 0.0, 0.0]), MatVec::new(vec![0.0, 0.0, 0.0])),
+            // direction: Ray::new(MatVec::new(vec![0.0, 0.0, 0.0]), MatVec::new(vec![0.0, 0.0, 0.0])),
+            direction: MatVec::new(vec![0.0, 0.0, 0.0]),
             normal: MatVec::new(vec![0.0,0.0,0.0]),
         }
     }

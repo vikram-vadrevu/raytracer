@@ -114,8 +114,8 @@ impl RayTracer {
                 //                                                pixel_color.get(2).clone() as u8,
                 //                                                0]));
                 #[allow(non_snake_case)]
-                // let sRGB: MatVec = utils::sRGB(&pixel_color);
-                let sRGB = pixel_color;
+                let sRGB: RGBA = utils::sRGB(&pixel_color);
+                // let sRGB = pixel_color;
 
                 self.image.put_pixel(x, y, sRGB.to_rgba());
 

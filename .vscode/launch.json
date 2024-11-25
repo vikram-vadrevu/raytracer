@@ -19,7 +19,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["data/ray-sphere.txt"],
+            "args": ["data/ray-sun.txt"],
             "cwd": "${workspaceFolder}"
         },
         {
