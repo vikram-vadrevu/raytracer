@@ -1,4 +1,4 @@
-use super::{scene, utils, CameraState, InputState, MatVec, Color, RGBA};
+use super::{scene, utils, CameraState, InputState, MatVec, RGBA};
 use super::ray::Ray;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -88,6 +88,12 @@ impl RayTracer {
                                                   elements[2].parse().unwrap()]);
                     let obj = Sun::new(direction, &raytracer.input_state);
                     raytracer.scene.add_light_source(Box::new(obj));
+                }
+                "color" => {
+                    let color = MatVec::new(vec![elements[0].parse().unwrap(),
+                                                  elements[1].parse().unwrap(),
+                                                  elements[2].parse().unwrap()]);
+                    raytracer.input_state.color = color;
                 }
                 _ => {
                     println!("Invalid action: {}", action);

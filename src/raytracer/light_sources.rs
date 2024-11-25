@@ -1,4 +1,4 @@
-use crate::raytracer::{Light, MatVec, RGBA, Color, InputState};
+use crate::raytracer::{MatVec, Color, InputState};
 use crate::raytracer::scene::LightSource;
 use crate::raytracer::ray::Ray;
 

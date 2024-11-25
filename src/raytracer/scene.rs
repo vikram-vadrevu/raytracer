@@ -1,17 +1,13 @@
-use std::f32::EPSILON;
-
-use crate::raytracer::{Intersection, IntersectionPayload, MatVec, RGBA, Color};
+use crate::raytracer::{Intersection, IntersectionPayload, MatVec, RGBA, Color, LightResidual};
 use crate::raytracer::ray::Ray;
 use crate::raytracer::utils;
 
-use super::{light_sources, Light, LightResidual};
-
 pub trait SceneObject {
     fn intersect(&self, ray: &Ray) -> IntersectionPayload;
-    fn normal(&self, point: &MatVec<3>) -> MatVec<3>;
+    // fn normal(&self, point: &MatVec<3>) -> MatVec<3>;
     fn color_at(&self, point: &MatVec<3>) -> Color;
-    fn apply_dir_transform(&self, dir: &MatVec<3>) -> MatVec<3>;
-    fn apply_light_transform(&self, light: &MatVec<3>) -> MatVec<3>;
+    // fn apply_dir_transform(&self, dir: &MatVec<3>) -> MatVec<3>;
+    // fn apply_light_transform(&self, light: &MatVec<3>) -> MatVec<3>;
 }
 
 pub trait LightSource {
@@ -46,15 +42,15 @@ impl Scene {
         self.light_sources.push(light_source);
     }
 
-    pub fn find_any_intersection(&self, ray: &Ray) -> IntersectionPayload {
-        for shape in &self.shapes {
-            let intersection: IntersectionPayload = shape.intersect(&ray);
-            if intersection.is_some() {
-                return intersection;
-            }
-        }
-        None
-    }
+    // pub fn find_any_intersection(&self, ray: &Ray) -> IntersectionPayload {
+    //     for shape in &self.shapes {
+    //         let intersection: IntersectionPayload = shape.intersect(&ray);
+    //         if intersection.is_some() {
+    //             return intersection;
+    //         }
+    //     }
+    //     None
+    // }
 
     pub fn find_minimum_intersection(&self, ray: &Ray) -> IntersectionPayload {
         let mut intersections: Vec<Intersection> = Vec::new();
@@ -88,7 +84,7 @@ impl Scene {
 
             // Bias the origin if the intesection belongs to this shape
             if intersection.shape_id.unwrap() == i {
-                ray.origin = ray.origin.clone() + 0.025f32 * ray.direction.clone();
+                ray.origin = ray.origin.clone() + 0.028f32 * ray.direction.clone();
             }
 
             let mut intersection: IntersectionPayload = shape.intersect(&ray);
@@ -142,19 +138,19 @@ impl Scene {
         return utils::lambert(&color, &ilumination_sources);
     }
 
-    fn _recursive_trace_through_scene(intersection: &Intersection, bounce_limit: u32) -> Intersection {
-        // cast secondary rays
-        // for each light source, calculate a ray to the light source
-        // and check the scene for intersections, if intersected, apply shadow and return
-        todo!("Secondary rays not yet implemented");
-    }
+    // fn _recursive_trace_through_scene(intersection: &Intersection, bounce_limit: u32) -> Intersection {
+    //     // cast secondary rays
+    //     // for each light source, calculate a ray to the light source
+    //     // and check the scene for intersections, if intersected, apply shadow and return
+    //     todo!("Secondary rays not yet implemented");
+    // }
 
     // Returns all light sources that illuminate an intersection
     fn _find_light_sources(&self, primary_intersection: &Intersection) -> Vec<LightResidual> {
 
         let mut light_sources: Vec<LightResidual> = Vec::new();
 
-        for (i, light_source) in self.light_sources.iter().enumerate() {
+        for (_i, light_source) in self.light_sources.iter().enumerate() {
 
             let mut current_residual: LightResidual = LightResidual::new();
             let mut light_ray: Ray = Ray::generate_light_ray(&primary_intersection, light_source);

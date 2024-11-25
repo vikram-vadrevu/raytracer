@@ -1,5 +1,5 @@
-use super::{light_sources, CameraState, Intersection, IntersectionPayload, MatVec, ProjectionType, RGBA};
-use super::scene::{LightSource, Scene, SceneObject};
+use crate::raytracer::{CameraState, Intersection, MatVec, ProjectionType};
+use crate::raytracer::scene::LightSource;
 
 #[derive(Debug)]
 pub struct Ray {
@@ -33,7 +33,6 @@ impl Ray {
                     let up: MatVec<3> = context.up.normalize();
                     let right: MatVec<3> = forward.cross(&up).normalize();
 
-                    // println!("The generated ray {:?}", (forward.clone()+s_x.clone()*right.clone()+s_y.clone()*up.clone()));
                     Ray::new(eye, (forward + ((s_x * right) + (s_y * up))).normalize())
                 },
                 _ => todo!("Projection type {:?} is not yet supported", context.projection),
@@ -47,22 +46,22 @@ impl Ray {
             Ray::new(origin, dir)
         }
 
-        pub fn refract(&self, normal: &MatVec<3>, ior: f32) -> MatVec<3> {
-            let cos_i: f32 = -self.direction.dot(normal.clone());
-            let sin_t2: f32 = ior.powi(2) * (1.0 - cos_i.powi(2));
-            if sin_t2 > 1.0 {
-                return MatVec::new(vec![0.0, 0.0, 0.0]);
-            }
-            let cos_t: f32 = (1.0 - sin_t2).sqrt();
-            return ior * self.direction.clone() + (ior*cos_i - cos_t) * normal.clone();
-        }
+        // pub fn refract(&self, normal: &MatVec<3>, ior: f32) -> MatVec<3> {
+        //     let cos_i: f32 = -self.direction.dot(normal.clone());
+        //     let sin_t2: f32 = ior.powi(2) * (1.0 - cos_i.powi(2));
+        //     if sin_t2 > 1.0 {
+        //         return MatVec::new(vec![0.0, 0.0, 0.0]);
+        //     }
+        //     let cos_t: f32 = (1.0 - sin_t2).sqrt();
+        //     return ior * self.direction.clone() + (ior*cos_i - cos_t) * normal.clone();
+        // }
 
-        pub fn inverse(&self) -> Ray {
-            Ray {
-                origin: self.direction.clone(),
-                direction: self.origin.clone(),
-            }
-        }
+        // pub fn inverse(&self) -> Ray {
+        //     Ray {
+        //         origin: self.direction.clone(),
+        //         direction: self.origin.clone(),
+        //     }
+        // }
 
         // pub fn trace_ray(&self, scene: &Scene, bounce_limit: u32) -> RGBA {
         //     // cast primary ray

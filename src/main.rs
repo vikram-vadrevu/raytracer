@@ -9,5 +9,4 @@ fn main() {
     }
     let input_file = &args[1];
     RayTracer::render_from_file(input_file);
-    println!("Hello, world!");
 }

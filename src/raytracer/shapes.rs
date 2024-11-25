@@ -1,4 +1,4 @@
-use crate::raytracer::{MatVec, InputState, Intersection, IntersectionPayload, RGBA, Color};
+use crate::raytracer::{MatVec, InputState, Intersection, IntersectionPayload, Color};
 use crate::raytracer::scene::SceneObject;
 use crate::raytracer::ray::Ray;
 use crate::raytracer::utils;
@@ -31,7 +31,7 @@ impl SceneObject for Sphere {
         // println!("radius: {:?}", self.radius);
 
         let inside: bool = (self.center.clone() - ray.origin.clone()).magnitude() < self.radius;
-        
+
         // println!("inside: {}", inside);
 
         let tc: f32 = ((self.center.clone() - ray.origin.clone()).dot(ray.direction.clone())) / ray.direction.clone().magnitude();
@@ -100,14 +100,16 @@ impl SceneObject for Sphere {
 
     }
 
-    fn normal(&self, point: &MatVec<3>) -> MatVec<3> {
-        // (point - self.center).normalize()
-        MatVec::new(vec![0.0])
-    }
-    fn color_at(&self, point: &MatVec<3>) -> Color {
+    fn color_at(&self, _point: &MatVec<3>) -> Color {
         self.color.clone()
     }
-    fn apply_dir_transform(&self, dir: &MatVec<3>) -> MatVec<3> {todo!("apply_dir_transform not implemented")}
-    fn apply_light_transform(&self, light: &MatVec<3>) -> MatVec<3> {todo!("apply_light_transform not implemented")}
+
+    // fn normal(&self, point: &MatVec<3>) -> MatVec<3> {
+    //     // (point - self.center).normalize()
+    //     MatVec::new(vec![0.0])
+    // }
+
+    // fn apply_dir_transform(&self, dir: &MatVec<3>) -> MatVec<3> {todo!("apply_dir_transform not implemented")}
+    // fn apply_light_transform(&self, light: &MatVec<3>) -> MatVec<3> {todo!("apply_light_transform not implemented")}
 
 }
