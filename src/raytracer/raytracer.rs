@@ -1,4 +1,4 @@
-use super::{scene, utils, CameraState, InputState, MatVec, RGBA};
+use super::{scene, utils, CameraState, InputState, MatVec, RGBA, ProjectionType};
 use super::ray::Ray;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -95,6 +95,39 @@ impl RayTracer {
                                                   elements[2].parse().unwrap()]);
                     raytracer.input_state.color = color;
                 }
+                "expose" => {
+                    let exposure = elements[0].parse().unwrap();
+                    raytracer.camera.exposure = Some(exposure);
+                }
+                "up" => {
+                    let up = MatVec::new(vec![elements[0].parse().unwrap(),
+                                                  elements[1].parse().unwrap(),
+                                                  elements[2].parse().unwrap()]);
+                    raytracer.camera.up = up;
+                }
+                "eye" => {
+                    let eye = MatVec::new(vec![elements[0].parse().unwrap(),
+                                                  elements[1].parse().unwrap(),
+                                                  elements[2].parse().unwrap()]);
+                    raytracer.camera.eye = eye;
+                }
+                "forward" => {
+                    let forward = MatVec::new(vec![elements[0].parse().unwrap(),
+                                                  elements[1].parse().unwrap(),
+                                                  elements[2].parse().unwrap()]);
+                    raytracer.camera.forward = forward;
+                }
+                "fisheye" => {
+                    raytracer.camera.projection = ProjectionType::FISHEYE;
+                }
+                "plane" => {
+                    let coeffs = MatVec::<4>::new(vec![elements[0].parse().unwrap(),
+                                                  elements[1].parse().unwrap(),
+                                                  elements[2].parse().unwrap(),
+                                                  elements[3].parse().unwrap()]);
+                    let obj = Plane::new(coeffs, &raytracer.input_state);
+                    raytracer.scene.add_shape(Box::new(obj));
+                }
                 _ => {
                     println!("Invalid action: {}", action);
                     std::process::exit(1);
@@ -113,12 +146,17 @@ impl RayTracer {
                 let ray = Ray::generate_primary_ray(MatVec::new(vec![x as f32, y as f32]), &self.camera);
                 // print!("Ray: {:?}", ray);
                 // calculate an intersection, from that intersection build out a recursive residual
-                let pixel_color: RGBA = self.scene.trace_through_scene(&ray, self.bounce_limit);
+                let mut pixel_color: RGBA = self.scene.trace_through_scene(&ray, self.bounce_limit);
 
                 // self.image.put_pixel(x, y, image::Rgba([pixel_color.get(0).clone() as u8,
                 //                                                pixel_color.get(1).clone() as u8,
                 //                                                pixel_color.get(2).clone() as u8,
                 //                                                0]));
+
+                if self.camera.exposure.is_some() {
+                    pixel_color = utils::appy_exposure(&pixel_color, self.camera.exposure.unwrap());
+                }
+
                 #[allow(non_snake_case)]
                 let sRGB: RGBA = utils::sRGB(&pixel_color);
                 // let sRGB = pixel_color;

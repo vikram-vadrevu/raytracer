@@ -70,38 +70,13 @@ impl SceneObject for Sphere {
             distance: t,
             residual: false,
         })
-        // let l = self.center.clone() - ray.origin.clone();
-        // let tca = l.clone() * ray.direction.clone();
-        // if tca < 0.0 {
-        //     return None;
-        // }
-        // let d2 = l.dot(l.clone()) - tca * tca;
-        // let r2 = self.radius * self.radius;
-        // if d2 > r2 {
-        //     return None;
-        // }
-        // let thc = (r2 - d2).sqrt();
-        // let t0 = tca - thc;
-        // let t1 = tca + thc;
-        // if t0 < 0.0 && t1 < 0.0 {
-        //     return None;
-        // }
-        // let t = if t0 < t1 { t0 } else { t1 };
-        // let point = ray.origin.clone() + ray.direction.clone().scale(t);
-        // let normal = (point.clone() - self.center.clone()).normalize();
-        //
-        // Some(Intersection {
-        //     shape_id : None,
-        //     point : point,
-        //     normal : normal,
-        //     distance: t,
-        //     residual: false,
-        // })
 
     }
 
     fn color_at(&self, _point: &MatVec<3>) -> Color {
+
         self.color.clone()
+
     }
 
     // fn normal(&self, point: &MatVec<3>) -> MatVec<3> {
@@ -112,4 +87,66 @@ impl SceneObject for Sphere {
     // fn apply_dir_transform(&self, dir: &MatVec<3>) -> MatVec<3> {todo!("apply_dir_transform not implemented")}
     // fn apply_light_transform(&self, light: &MatVec<3>) -> MatVec<3> {todo!("apply_light_transform not implemented")}
 
+}
+
+pub struct Plane {
+    pub normal: MatVec<3>,
+    pub D: f32,
+    pub color: Color,
+}
+
+impl Plane {
+    pub fn new(coeffs: MatVec<4>, context: &InputState) -> Plane {
+        println!("Making plane with coeffs: {:?}, color: {:?}", coeffs, context.color);
+        Plane {
+            normal: MatVec::new(vec![*coeffs.get(0), *coeffs.get(1), *coeffs.get(2)]).normalize(),
+            D: *coeffs.get(3),
+            color: context.color.clone(),
+        }
+    }
+}
+
+impl SceneObject for Plane {
+    
+        fn intersect(&self, ray: &Ray) -> IntersectionPayload {
+    
+            let denom: f32 = self.normal.clone().dot(ray.direction.clone());
+    
+            if denom.abs() < 0.0001 {
+                return None;
+            }
+    
+            let t: f32 = -(self.normal.clone().dot(ray.origin.clone()) + self.D) / denom;
+    
+            if t < 0.0 {
+                return None;
+            }
+    
+            let intersection_point: MatVec<3> = ray.origin.clone() + t * ray.direction.clone();
+            
+            let normal: MatVec<3> = self.normal.clone();
+    
+            Some(Intersection {
+                shape_id: None,
+                point: intersection_point,
+                normal,
+                distance: t,
+                residual: false,
+            })
+    
+        }
+    
+        fn color_at(&self, _point: &MatVec<3>) -> Color {
+    
+            self.color.clone()
+    
+        }
+    
+        // fn normal(&self, point: &MatVec<3>) -> MatVec<3> {
+        //     // self.coeffs.get(0..3).normalize()
+        //     MatVec::new(vec![0.0])
+        // }
+    
+        // fn apply_dir_transform(&self, dir: &MatVec<3>) -> MatVec<3> {todo!("apply_dir_transform not implemented")}
+        // fn apply_light_transform(&self, light: &MatVec<3>) -> MatVec<3> {todo!("apply_light_transform not implemented")}
 }

@@ -22,7 +22,9 @@ impl Ray {
         // pixel coordinates. All conversions and projections should be applied
         // here.
         pub fn generate_primary_ray(through_pixel: MatVec<2>, context: &CameraState) -> Ray {
+            
             match context.projection {
+                
                 ProjectionType::FLAT => {
                     
                     let s_x: f32 = ((2.0*through_pixel[0]) - (context.width as f32)) / (u32::max(context.width, context.height) as f32);
@@ -35,6 +37,23 @@ impl Ray {
 
                     Ray::new(eye, (forward + ((s_x * right) + (s_y * up))).normalize())
                 },
+
+                ProjectionType::FISHEYE => {
+
+                    let s_x: f32 = ((2.0*through_pixel[0]) - (context.width as f32)) / (u32::max(context.width, context.height) as f32);
+                    let s_y: f32 = ((context.height as f32) - (2.0*through_pixel[1])) / (u32::max(context.width, context.height) as f32);
+
+                    let eye: MatVec<3> = context.eye.clone();
+                    let mut forward: MatVec<3> = context.forward.clone();
+                    let up: MatVec<3> = context.up.normalize();
+                    let right: MatVec<3> = forward.cross(&up).normalize();
+
+                    forward = f32::sqrt(1.0f32 - (s_x.powi(2) - s_y.powi(2))) * forward;
+
+                    Ray::new(eye, (forward + ((s_x * right) + (s_y * up))).normalize())
+
+                }
+
                 _ => todo!("Projection type {:?} is not yet supported", context.projection),
             }
         }

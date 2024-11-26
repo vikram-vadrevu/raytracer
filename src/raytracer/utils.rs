@@ -45,11 +45,7 @@ pub fn round_precision(value: f32, precision: f32) -> f32 {
 
 #[inline(always)]
 pub fn gamma_correct(value: f32) -> f32 {
-    if value <= 0.0031308 {
-        12.92 * value
-    } else {
-        1.055 * value.powf(1.0 / 2.4) - 0.055
-    }
+    if value <= 0.0031308 { 12.92 * value } else { 1.055 * value.powf(1.0 / 2.4) - 0.055 }
 }
 
 #[allow(non_snake_case)]
@@ -62,9 +58,19 @@ pub fn sRGB(color: &RGBA) -> MatVec<4> {
     MatVec::new(to_return)
 }
 
+#[inline(always)]
 pub fn color_to_rgba(color: Color, alpha: f32) -> RGBA {
     MatVec::<4>::new(vec![*color.get(0),
                                   *color.get(1),
                                   *color.get(2), 
                                   alpha])
+}
+
+pub fn appy_exposure(color: &RGBA, exposure: f32) -> RGBA {
+    let mut to_return: Vec<f32> = Vec::new();
+    for i in 0..3 {
+        to_return.push(1.0 - (-color.get(i).clone() * exposure).exp());
+    }
+    to_return.push(color.get(3).clone()); // Pass through the 4th element
+    MatVec::new(to_return)
 }
