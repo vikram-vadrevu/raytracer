@@ -78,8 +78,9 @@ impl Scene {
     }
 
     pub fn find_minimum_intersection_with_point(&self, ray: &mut Ray, intersection: &Intersection) -> IntersectionPayload {
+        
         let mut intersections: Vec<Intersection> = Vec::new();
-        // for i, shape in &self.shapes {
+
         for (i, shape) in self.shapes.iter().enumerate() {
 
             // Bias the origin if the intesection belongs to this shape
@@ -88,21 +89,30 @@ impl Scene {
             }
 
             let mut intersection: IntersectionPayload = shape.intersect(&ray);
+
             if intersection.is_some() {
+
                 intersection.as_mut().unwrap().shape_id = Some(i);
                 intersections.push(intersection.unwrap());
+
             }
         }
         if intersections.is_empty() {
+
             return None;
+
         }
 
         let mut minimum_intersection: IntersectionPayload = None;
 
         for i in intersections {
+
             if minimum_intersection.is_none() || i.distance < minimum_intersection.as_ref().unwrap().distance {
+                
                 minimum_intersection = Some(i);
+
             }
+
         }
         // println!("Minimum intersection: {:?}", minimum_intersection);
         minimum_intersection

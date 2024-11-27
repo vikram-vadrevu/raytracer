@@ -108,23 +108,105 @@ impl Plane {
 
 impl SceneObject for Plane {
     
-        fn intersect(&self, ray: &Ray) -> IntersectionPayload {
+    fn intersect(&self, ray: &Ray) -> IntersectionPayload {
+
+        let denom: f32 = self.normal.clone().dot(ray.direction.clone());
+
+        if denom.abs() < 0.0001 {
+            return None;
+        }
+
+        let t: f32 = -(self.normal.clone().dot(ray.origin.clone()) + self.D) / denom;
+
+        if t < 0.0 {
+            return None;
+        }
+
+        let intersection_point: MatVec<3> = ray.origin.clone() + t * ray.direction.clone();
+        
+        let normal: MatVec<3> = self.normal.clone();
+
+        Some(Intersection {
+            shape_id: None,
+            point: intersection_point,
+            normal,
+            distance: t,
+            residual: false,
+        })
+
+    }
+
+    fn color_at(&self, _point: &MatVec<3>) -> Color {
+
+        self.color.clone()
+
+    }
+
+    // fn normal(&self, point: &MatVec<3>) -> MatVec<3> {
+    //     // self.coeffs.get(0..3).normalize()
+    //     MatVec::new(vec![0.0])
+    // }
+
+    // fn apply_dir_transform(&self, dir: &MatVec<3>) -> MatVec<3> {todo!("apply_dir_transform not implemented")}
+    // fn apply_light_transform(&self, light: &MatVec<3>) -> MatVec<3> {todo!("apply_light_transform not implemented")}
+}
+
+pub struct Triangle {
+    pub vertices: [MatVec<3>; 3],
+    pub color: Color,
+}
+
+impl Triangle {
+    pub fn new(vertices: Vec<MatVec<3>>, context: &InputState) -> Triangle {
+        assert_eq!(vertices.len(), 3, "Triangle must have exactly 3 vertices");
+        println!("Making triangle with vertices: {:?}, color: {:?}", vertices, context.color);
+        Triangle {
+            vertices: [vertices[0].clone(), vertices[1].clone(), vertices[2].clone()],
+            color: context.color.clone(),
+        }
+    }
+}
+
+impl SceneObject for Triangle {
+
+    fn intersect(&self, ray: &Ray) -> IntersectionPayload {
+            
+            let edge1: MatVec<3> = self.vertices[1].clone() - self.vertices[0].clone();
+            let edge2: MatVec<3> = self.vertices[2].clone() - self.vertices[0].clone();
     
-            let denom: f32 = self.normal.clone().dot(ray.direction.clone());
+            let h: MatVec<3> = ray.direction.clone().cross(&edge2);
+            let a: f32 = edge1.clone().dot(h.clone());
     
-            if denom.abs() < 0.0001 {
+            if a.abs() < 0.0001 {
                 return None;
             }
     
-            let t: f32 = -(self.normal.clone().dot(ray.origin.clone()) + self.D) / denom;
+            let f: f32 = 1.0 / a;
+            let s: MatVec<3> = ray.origin.clone() - self.vertices[0].clone();
+            let u: f32 = f * s.clone().dot(h.clone());
     
-            if t < 0.0 {
+            if u < 0.0 || u > 1.0 {
+                return None;
+            }
+    
+            let q: MatVec<3> = s.clone().cross(&edge1);
+            let v: f32 = f * ray.direction.clone().dot(q.clone());
+    
+            if v < 0.0 || u + v > 1.0 {
+                return None;
+            }
+    
+            let t: f32 = f * edge2.clone().dot(q.clone());
+    
+            if t < 0.0001 {
                 return None;
             }
     
             let intersection_point: MatVec<3> = ray.origin.clone() + t * ray.direction.clone();
-            
-            let normal: MatVec<3> = self.normal.clone();
+            let mut normal: MatVec<3> = edge1.clone().cross(&edge2).normalize();
+            if normal.dot(ray.direction.clone()) > 0.0 {
+                normal = -1.0f32 * normal;
+            }
     
             Some(Intersection {
                 shape_id: None,
@@ -133,20 +215,13 @@ impl SceneObject for Plane {
                 distance: t,
                 residual: false,
             })
-    
-        }
-    
-        fn color_at(&self, _point: &MatVec<3>) -> Color {
-    
-            self.color.clone()
-    
-        }
-    
-        // fn normal(&self, point: &MatVec<3>) -> MatVec<3> {
-        //     // self.coeffs.get(0..3).normalize()
-        //     MatVec::new(vec![0.0])
-        // }
-    
-        // fn apply_dir_transform(&self, dir: &MatVec<3>) -> MatVec<3> {todo!("apply_dir_transform not implemented")}
-        // fn apply_light_transform(&self, light: &MatVec<3>) -> MatVec<3> {todo!("apply_light_transform not implemented")}
+            
+    }
+
+    fn color_at(&self, _point: &MatVec<3>) -> Color {
+
+        self.color.clone()
+
+    }
+
 }

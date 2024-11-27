@@ -16,6 +16,7 @@ pub struct RayTracer {
     input_state: InputState,
     image: RgbaImage,
     camera: CameraState,
+    verticies: Vec<MatVec<3>>,
 
 }
 
@@ -33,6 +34,7 @@ impl RayTracer {
             input_state : InputState::new(),
             image: ImageBuffer::new(width, height),
             camera : CameraState::new(width, height),
+            verticies: Vec::new(),
         }
     }
 
@@ -126,6 +128,24 @@ impl RayTracer {
                                                   elements[2].parse().unwrap(),
                                                   elements[3].parse().unwrap()]);
                     let obj = Plane::new(coeffs, &raytracer.input_state);
+                    raytracer.scene.add_shape(Box::new(obj));
+                }
+                "xyz" => {
+                    let vertex = MatVec::new(vec![elements[0].parse().unwrap(),
+                                                  elements[1].parse().unwrap(),
+                                                  elements[2].parse().unwrap()]);
+                    raytracer.verticies.push(vertex);
+                }
+                "tri" => {
+                    let indices: Vec<isize> = elements.iter().map(|e| e.parse().unwrap()).collect();
+                    let vertices: Vec<MatVec<3>> = indices.iter().map(|&i| {
+                        if i < 0 {
+                            raytracer.verticies[(raytracer.verticies.len() as isize + i) as usize].clone()
+                        } else {
+                            raytracer.verticies[(i - 1) as usize].clone()
+                        }
+                    }).collect();
+                    let obj = Triangle::new(vertices, &raytracer.input_state);
                     raytracer.scene.add_shape(Box::new(obj));
                 }
                 _ => {

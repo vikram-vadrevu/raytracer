@@ -19,7 +19,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["data/ray-sun.txt"],
+            "args": ["data/ray-tri.txt"],
             "cwd": "${workspaceFolder}"
         },
         {
@@ -38,7 +38,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["data/ray-sphere.txt"],
+            "args": ["data/ray-tri.txt"],
             "cwd": "${workspaceFolder}"
         }
     ]
