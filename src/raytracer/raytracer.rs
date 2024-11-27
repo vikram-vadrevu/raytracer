@@ -56,8 +56,6 @@ impl RayTracer {
         }
 
         let _magic_num: String = header_parts[0].clone();
-        // let width: u32 = header_parts[1].parse().unwrap();
-        // let height: u32 = header_parts[2].parse().unwrap();
         let height: u32 = header_parts[1].parse().unwrap();
         let width: u32 = header_parts[2].parse().unwrap();
         let out_file: String = header_parts[3].clone();
@@ -83,45 +81,45 @@ impl RayTracer {
                     let radius = elements[3].parse().unwrap();
                     let obj = Sphere::new(center, radius, &raytracer.input_state);
                     raytracer.scene.add_shape(Box::new(obj));
-                }
+                },
                 "sun" => {
                     let direction = MatVec::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap(),
                                                   elements[2].parse().unwrap()]);
                     let obj = Sun::new(direction, &raytracer.input_state);
                     raytracer.scene.add_light_source(Box::new(obj));
-                }
+                },
                 "color" => {
                     let color = MatVec::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap(),
                                                   elements[2].parse().unwrap()]);
                     raytracer.input_state.color = color;
-                }
+                },
                 "expose" => {
                     let exposure = elements[0].parse().unwrap();
                     raytracer.camera.exposure = Some(exposure);
-                }
+                },
                 "up" => {
                     let up = MatVec::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap(),
                                                   elements[2].parse().unwrap()]);
                     raytracer.camera.up = up;
-                }
+                },
                 "eye" => {
                     let eye = MatVec::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap(),
                                                   elements[2].parse().unwrap()]);
                     raytracer.camera.eye = eye;
-                }
+                },
                 "forward" => {
                     let forward = MatVec::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap(),
                                                   elements[2].parse().unwrap()]);
                     raytracer.camera.forward = forward;
-                }
+                },
                 "fisheye" => {
                     raytracer.camera.projection = ProjectionType::FISHEYE;
-                }
+                },
                 "plane" => {
                     let coeffs = MatVec::<4>::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap(),
@@ -129,13 +127,13 @@ impl RayTracer {
                                                   elements[3].parse().unwrap()]);
                     let obj = Plane::new(coeffs, &raytracer.input_state);
                     raytracer.scene.add_shape(Box::new(obj));
-                }
+                },
                 "xyz" => {
                     let vertex = MatVec::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap(),
                                                   elements[2].parse().unwrap()]);
                     raytracer.verticies.push(vertex);
-                }
+                },
                 "tri" => {
                     let indices: Vec<isize> = elements.iter().map(|e| e.parse().unwrap()).collect();
                     let vertices: Vec<MatVec<3>> = indices.iter().map(|&i| {
@@ -147,6 +145,13 @@ impl RayTracer {
                     }).collect();
                     let obj = Triangle::new(vertices, &raytracer.input_state);
                     raytracer.scene.add_shape(Box::new(obj));
+                },
+                "bulb" => {
+                    let position = MatVec::new(vec![elements[0].parse().unwrap(),
+                                                  elements[1].parse().unwrap(),
+                                                  elements[2].parse().unwrap()]);
+                    let obj = Bulb::new(position, &raytracer.input_state);
+                    raytracer.scene.add_light_source(Box::new(obj));
                 }
                 _ => {
                     println!("Invalid action: {}", action);
@@ -161,20 +166,18 @@ impl RayTracer {
 
     pub fn render(&mut self) -> bool {
         for x in 0..self.width {
+
             for y in 0..self.height {
                 
                 let ray = Ray::generate_primary_ray(MatVec::new(vec![x as f32, y as f32]), &self.camera);
                 // print!("Ray: {:?}", ray);
-                // calculate an intersection, from that intersection build out a recursive residual
+
                 let mut pixel_color: RGBA = self.scene.trace_through_scene(&ray, self.bounce_limit);
 
-                // self.image.put_pixel(x, y, image::Rgba([pixel_color.get(0).clone() as u8,
-                //                                                pixel_color.get(1).clone() as u8,
-                //                                                pixel_color.get(2).clone() as u8,
-                //                                                0]));
-
                 if self.camera.exposure.is_some() {
+
                     pixel_color = utils::appy_exposure(&pixel_color, self.camera.exposure.unwrap());
+
                 }
 
                 #[allow(non_snake_case)]
@@ -183,21 +186,18 @@ impl RayTracer {
 
                 self.image.put_pixel(x, y, sRGB.to_rgba());
 
-                // calculate and intersection point
-                // if secondary bounce, execute that action and return a color
-                // trace back light sources for the intersection point
-                    // for each light source, calculate a ray to the light source
-                    // and check the scene for intersections, if intersected, apply shadow and return
-                // apply lighting to color
-                // sum the colors of all recursive calls and return a final pixel value
-                // take that value, apply exposure and sRGB conversit and write to image
             }
+
         }
+
         return true;
+
     }
 
     pub fn save_image(&self, file_path: String) {
+
         self.image.save(file_path).unwrap();
+        
     }
 
 }

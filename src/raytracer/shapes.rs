@@ -3,6 +3,7 @@ use crate::raytracer::scene::SceneObject;
 use crate::raytracer::ray::Ray;
 use crate::raytracer::utils;
 
+/// Represents a sphere in 3D space.
 pub struct Sphere {
     pub center: MatVec<3>,
     pub radius: f32,
@@ -79,16 +80,9 @@ impl SceneObject for Sphere {
 
     }
 
-    // fn normal(&self, point: &MatVec<3>) -> MatVec<3> {
-    //     // (point - self.center).normalize()
-    //     MatVec::new(vec![0.0])
-    // }
-
-    // fn apply_dir_transform(&self, dir: &MatVec<3>) -> MatVec<3> {todo!("apply_dir_transform not implemented")}
-    // fn apply_light_transform(&self, light: &MatVec<3>) -> MatVec<3> {todo!("apply_light_transform not implemented")}
-
 }
 
+/// Represents a plane in 3D space.
 pub struct Plane {
     pub normal: MatVec<3>,
     pub D: f32,
@@ -142,15 +136,9 @@ impl SceneObject for Plane {
 
     }
 
-    // fn normal(&self, point: &MatVec<3>) -> MatVec<3> {
-    //     // self.coeffs.get(0..3).normalize()
-    //     MatVec::new(vec![0.0])
-    // }
-
-    // fn apply_dir_transform(&self, dir: &MatVec<3>) -> MatVec<3> {todo!("apply_dir_transform not implemented")}
-    // fn apply_light_transform(&self, light: &MatVec<3>) -> MatVec<3> {todo!("apply_light_transform not implemented")}
 }
 
+/// Represents a triangle in 3D space.
 pub struct Triangle {
     pub vertices: [MatVec<3>; 3],
     pub color: Color,

@@ -1,37 +1,19 @@
 use std::ops::{Add, Sub, Mul, Index};
 use std::fmt::Debug;
 use ray::Ray;
+
 // For now MatVec represents a 'Mathematical Vector'
 // In needed, I will change this to be a 'Matrix Vector',
 // ie a matrix/tensor
 
-// #[derive(Debug)]
+/// `MatVec` or 'Mathematical Vector' is a generic wrapper around
+/// f32 arrays with mathematical operations defined.
+/// This type is the funamental building block for the raytracer.
 pub struct MatVec<const N: usize> {
     data: [f32; N],
-    // data: Vec<f32>,
 }
 
-impl<const N: usize> Debug for MatVec<N> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (i, value) in self.data.iter().enumerate() {
-            writeln!(f, "data[{}]: {}", i, value)?;
-        }
-        Ok(())
-    }
-}
-
-impl<const N: usize> Clone for MatVec<N> {
-    fn clone(&self) -> Self {
-        let mut new_data = [0.0f32; N];
-        for i in 0..N {
-            new_data[i] = self.data[i];
-        }
-        MatVec::<N> {
-            data: new_data,
-        }
-    }
-}
-
+// Method Implementations for MatVec
 impl<const N: usize> MatVec<N> {
 
     pub fn new(data: Vec<f32>) -> MatVec<N> {
@@ -161,6 +143,29 @@ impl<const N: usize> MatVec<N> {
 
 }
 
+// Implementations for standard traits and operators on MatVec types
+
+impl<const N: usize> Debug for MatVec<N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (i, value) in self.data.iter().enumerate() {
+            writeln!(f, "data[{}]: {}", i, value)?;
+        }
+        Ok(())
+    }
+}
+
+impl<const N: usize> Clone for MatVec<N> {
+    fn clone(&self) -> Self {
+        let mut new_data = [0.0f32; N];
+        for i in 0..N {
+            new_data[i] = self.data[i];
+        }
+        MatVec::<N> {
+            data: new_data,
+        }
+    }
+}
+
 impl<const N: usize> Add for MatVec<N> {
     type Output = MatVec<N>;
 
@@ -177,7 +182,8 @@ impl<const N: usize> Sub for MatVec<N> {
     }
 }
 
-// M * k
+/// Multiplication of a MatVec by a scalar.
+/// Represents M * k
 impl<const N: usize> Mul<f32> for MatVec<N> {
     type Output = MatVec<N>;
 
@@ -186,7 +192,8 @@ impl<const N: usize> Mul<f32> for MatVec<N> {
     }
 }
 
-// k * M
+/// Multiplication of a scalar by a MatVec.
+/// Represents k * M
 impl<const N: usize> Mul<MatVec<N>> for f32 {
     type Output = MatVec<N>;
 
@@ -215,21 +222,18 @@ impl<const N: usize> Index<usize> for MatVec<N> {
     }
 }
 
+// Other Commonly used types and constructors
+
 #[derive(Debug)]
 pub struct Intersection {
 
     pub shape_id: Option<usize>, // Index of the shape in the scene
-    pub point: MatVec<3>,   // Intersection point in the world coordinate frame
-    pub normal: MatVec<3>,  // Normals with respect to the object in the world coordinate frame
-    pub distance: f32,   // Distance from the ray origin to the intersection point
-    pub residual: bool,  // Indicates whether or not the intersection will result in a residual
+    pub point: MatVec<3>,     // Intersection point in the world coordinate frame
+    pub normal: MatVec<3>,    // Normals with respect to the object in the world coordinate frame
+    pub distance: f32,          // Distance from the ray origin to the intersection point
+    pub residual: bool,         // Indicates whether or not the intersection will result in a residual
 
 }
-
-pub type IntersectionPayload = Option<Intersection>;
-pub type RGBA = MatVec<4>;
-pub type Color = MatVec<3>;
-pub type Light = MatVec<3>;
 
 pub struct InputState {
 
@@ -248,12 +252,6 @@ impl InputState {
     pub fn new() -> InputState {
         InputState {
             color: MatVec::new(vec![1.0, 1.0, 1.0]),
-            // texcoord: MatVec::new(vec![0.0, 0.0]),
-            // texture: String::from(""),
-            // roughness: 0.0,
-            // shininess: 0.0,
-            // transparency: 0.0,
-            // index_of_refraction: 0.0,
         }
     }
 
@@ -261,10 +259,12 @@ impl InputState {
 
 #[derive(Debug)]
 pub enum ProjectionType {
+
     FLAT,
     FISHEYE,
     PANORAMIC,
-    DOF
+    DOF,
+
 }
 
 pub struct CameraState {
@@ -319,11 +319,17 @@ impl LightResidual {
     }
 }
 
+// Type aliases
+pub type IntersectionPayload = Option<Intersection>;
+pub type RGBA = MatVec<4>;
+pub type Color = MatVec<3>;
+pub type Light = MatVec<3>;
+
 // Export internal modules
 pub mod raytracer;
-pub mod ray;
-pub mod scene;
-pub mod shapes;
-pub mod light_sources;
-pub mod utils;
-// pub mod materials;
+mod ray;
+mod scene;
+mod shapes;
+mod light_sources;
+mod utils;
+// mod materials;
