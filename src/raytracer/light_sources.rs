@@ -54,7 +54,10 @@ impl LightSource for Bulb {
     
     fn intensity(&self, ray: &Ray) -> f32 {
         let distance: f32 = (self.position.clone() - ray.origin.clone()).magnitude();
-        1.0f32 / f32::powi(distance, 2)
+        let epsilon: f32 = 1e-6;
+        let intensity = 1.0f32 / f32::powi(distance + epsilon, 2);
+        intensity
+
     }
 
     fn compute_direction(&self, origin: &MatVec<3>) -> MatVec<3> {

@@ -4,7 +4,7 @@ use crate::raytracer::scene::LightSource;
 /// Represents a ray in 3D space.
 /// The actual creating of rays is done through the
 /// static methods implemented on this struct.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ray {
 
     pub origin: MatVec<3>,

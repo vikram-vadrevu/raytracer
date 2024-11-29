@@ -107,18 +107,20 @@ impl Scene {
 
     }
 
-    pub fn find_minimum_intersection_with_point(&self, ray: &mut Ray, intersection: &Intersection) -> IntersectionPayload {
+    pub fn find_minimum_intersection_with_point(&self, ray: &Ray, intersection: &Intersection) -> IntersectionPayload {
         
         let mut intersections: Vec<Intersection> = Vec::new();
+
+        let mut local_ray = ray.clone();
 
         for (i, shape) in self.shapes.iter().enumerate() {
 
             // Bias the origin if the intesection belongs to this shape
             if intersection.shape_id.unwrap() == i {
-                ray.origin = ray.origin.clone() + 0.028f32 * ray.direction.clone();
+                local_ray.origin = local_ray.origin.clone() + 0.038f32 * local_ray.direction.clone();
             }
 
-            let mut intersection: IntersectionPayload = shape.intersect(&ray);
+            let mut intersection: IntersectionPayload = shape.intersect(&local_ray);
 
             if intersection.is_some() {
 
@@ -127,6 +129,7 @@ impl Scene {
 
             }
         }
+        
         if intersections.is_empty() {
 
             return None;
@@ -188,15 +191,15 @@ impl Scene {
         for (_i, light_source) in self.light_sources.iter().enumerate() {
 
             let mut current_residual: LightResidual = LightResidual::new();
-            let mut light_ray: Ray = Ray::generate_light_ray(&primary_intersection, light_source);
+            let light_ray: Ray = Ray::generate_light_ray(&primary_intersection, light_source);
 
-            let intersection = self.find_minimum_intersection_with_point(&mut light_ray, primary_intersection);
+            let intersection = self.find_minimum_intersection_with_point(&light_ray, primary_intersection);
 
             if intersection.is_none() {
 
                 current_residual.color = light_source.light_color();
                 current_residual.intensity = light_source.intensity(&light_ray);
-                current_residual.direction = light_source.compute_direction(&MatVec::<3>::new(vec![0.0, 0.0, 0.0]));
+                current_residual.direction = light_ray.direction.clone();
                 current_residual.normal = primary_intersection.normal.clone();
                 light_sources.push(current_residual);
 

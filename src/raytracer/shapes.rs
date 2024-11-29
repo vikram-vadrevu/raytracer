@@ -31,6 +31,7 @@ impl SceneObject for Sphere {
         // println!("center: {:?}", self.center);
         // println!("radius: {:?}", self.radius);
 
+        println!("Inside: {:?}",(self.center.clone() - ray.origin.clone()).magnitude());
         let inside: bool = (self.center.clone() - ray.origin.clone()).magnitude() < self.radius;
 
         // println!("inside: {}", inside);
