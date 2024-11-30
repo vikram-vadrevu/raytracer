@@ -109,3 +109,23 @@ pub fn spherical_world_to_uv(point: &MatVec<3>, center: &MatVec<3>, radius: f32)
 
     MatVec::new(vec![u, v])
 }
+
+pub fn barycentric_uv(point: &MatVec<3>, verticies: Vec<MatVec<3>>, texcoords: Vec<MatVec<2>>) -> MatVec<2> {
+    let v0 = verticies[1].clone() - verticies[0].clone();
+    let v1 = verticies[2].clone() - verticies[0].clone();
+    let v2 = point.clone() - verticies[0].clone();
+    
+    let d00 = v0.dot(v0.clone());
+    let d01 = v0.dot(v1.clone());
+    let d11 = v1.dot(v1.clone());
+    let d20 = v2.dot(v0.clone());
+    let d21 = v2.dot(v1.clone());
+    
+    let denom = d00 * d11 - d01 * d01;
+    let v = (d11 * d20 - d01 * d21) / denom;
+    let w = (d00 * d21 - d01 * d20) / denom;
+    let u = 1.0 - v - w;
+    
+    let uv = texcoords[0].clone() * u + texcoords[1].clone() * v + texcoords[2].clone() * w;
+    MatVec::new(vec![uv.get(0).clone(), uv.get(1).clone()])
+}

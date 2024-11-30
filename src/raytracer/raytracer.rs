@@ -16,8 +16,6 @@ pub struct RayTracer {
     input_state: InputState,
     image: RgbaImage,
     camera: CameraState,
-    verticies: Vec<MatVec<3>>,
-    texcoord: Vec<MatVec<2>>,
 
 }
 
@@ -35,8 +33,6 @@ impl RayTracer {
             input_state : InputState::new(),
             image: ImageBuffer::new(width, height),
             camera : CameraState::new(width, height),
-            verticies: Vec::new(),
-            texcoord: Vec::new(),
         }
     }
 

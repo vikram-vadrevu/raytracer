@@ -25,6 +25,7 @@ impl Ray {
     /// Origin of the ray is the camera's eye, and the direction is computed based on the projection type.
     /// Currently supportes, Flat and Fisheye projections.
     /// NOTE: Fisheye does not work as of now.
+    #[allow(unreachable_patterns)]
     pub fn generate_primary_ray(through_pixel: MatVec<2>, context: &CameraState) -> Ray {
         
         match context.projection {

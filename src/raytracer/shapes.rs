@@ -1,4 +1,4 @@
-use crate::raytracer::{texture, Color, InputState, Intersection, IntersectionPayload, MatVec};
+use crate::raytracer::{Color, InputState, Intersection, IntersectionPayload, MatVec};
 use crate::raytracer::scene::SceneObject;
 use crate::raytracer::ray::Ray;
 use crate::raytracer::utils;
@@ -162,7 +162,7 @@ impl SceneObject for Plane {
 
 /// Represents a triangle in 3D space.
 pub struct Triangle {
-    pub vertices: [MatVec<3>; 3],
+    pub verticies: [MatVec<3>; 3],
     pub color: Color,
     pub texture: Option<Texture2d>,
     pub texcoords: Option<Vec<MatVec<2>>>,
@@ -173,7 +173,7 @@ impl Triangle {
         assert_eq!(indices.len(), 3, "Triangle must have exactly 3 vertices");
         println!("Making triangle with vertices: {:?}, color: {:?}", indices, context.color);
 
-        let vertices: Vec<MatVec<3>> = indices.iter().map(|&i| {
+        let verticies: Vec<MatVec<3>> = indices.iter().map(|&i| {
             if i < 0 {
                 context.verticies[(context.verticies.len() as i32 + i) as usize].clone()
             } else {
@@ -201,41 +201,41 @@ impl Triangle {
         };
 
         Triangle {
-            vertices: [vertices[0].clone(), vertices[1].clone(), vertices[2].clone()],
+            verticies: [verticies[0].clone(), verticies[1].clone(), verticies[2].clone()],
             color: context.color.clone(),
             texture,
             texcoords,
         }
     }
 
-    fn uv_at(&self, point: &MatVec<3>) -> MatVec<2> {
-        let texcoords = self.texcoords.as_ref().unwrap();
-        let v0 = self.vertices[1].clone() - self.vertices[0].clone();
-        let v1 = self.vertices[2].clone() - self.vertices[0].clone();
-        let v2 = point.clone() - self.vertices[0].clone();
+    // fn uv_at(&self, point: &MatVec<3>) -> MatVec<2> {
+    //     let texcoords = self.texcoords.as_ref().unwrap();
+    //     let v0 = self.vertices[1].clone() - self.vertices[0].clone();
+    //     let v1 = self.vertices[2].clone() - self.vertices[0].clone();
+    //     let v2 = point.clone() - self.vertices[0].clone();
     
-        // Compute dot products for the barycentric coordinates
-        let d00 = v0.dot(v0.clone());
-        let d01 = v0.dot(v1.clone());
-        let d11 = v1.dot(v1.clone());
-        let d20 = v2.dot(v0.clone());
-        let d21 = v2.dot(v1.clone());
+    //     // Compute dot products for the barycentric coordinates
+    //     let d00 = v0.dot(v0.clone());
+    //     let d01 = v0.dot(v1.clone());
+    //     let d11 = v1.dot(v1.clone());
+    //     let d20 = v2.dot(v0.clone());
+    //     let d21 = v2.dot(v1.clone());
     
-        // Compute the denominator of the barycentric coordinates
-        let denom = d00 * d11 - d01 * d01;
+    //     // Compute the denominator of the barycentric coordinates
+    //     let denom = d00 * d11 - d01 * d01;
     
-        if denom.abs() < 1e-6 {
-            panic!("Triangle vertices are degenerate or too close together!");
-        }
+    //     if denom.abs() < 1e-6 {
+    //         panic!("Triangle vertices are degenerate or too close together!");
+    //     }
     
-        // Barycentric coordinates
-        let v = (d11 * d20 - d01 * d21) / denom;
-        let w = (d00 * d21 - d01 * d20) / denom;
-        let u = 1.0 - v - w;
+    //     // Barycentric coordinates
+    //     let v = (d11 * d20 - d01 * d21) / denom;
+    //     let w = (d00 * d21 - d01 * d20) / denom;
+    //     let u = 1.0 - v - w;
     
-        // Interpolate the UV coordinates using barycentric weights
-        texcoords[0].clone() * u + texcoords[1].clone() * v + texcoords[2].clone() * w
-    }
+    //     // Interpolate the UV coordinates using barycentric weights
+    //     texcoords[0].clone() * u + texcoords[1].clone() * v + texcoords[2].clone() * w
+    // }
     
 
 }
@@ -244,8 +244,8 @@ impl SceneObject for Triangle {
 
     fn intersect(&self, ray: &Ray) -> IntersectionPayload {
             
-            let edge1: MatVec<3> = self.vertices[1].clone() - self.vertices[0].clone();
-            let edge2: MatVec<3> = self.vertices[2].clone() - self.vertices[0].clone();
+            let edge1: MatVec<3> = self.verticies[1].clone() - self.verticies[0].clone();
+            let edge2: MatVec<3> = self.verticies[2].clone() - self.verticies[0].clone();
     
             let h: MatVec<3> = ray.direction.clone().cross(&edge2);
             let a: f32 = edge1.clone().dot(h.clone());
@@ -255,7 +255,7 @@ impl SceneObject for Triangle {
             }
     
             let f: f32 = 1.0 / a;
-            let s: MatVec<3> = ray.origin.clone() - self.vertices[0].clone();
+            let s: MatVec<3> = ray.origin.clone() - self.verticies[0].clone();
             let u: f32 = f * s.clone().dot(h.clone());
     
             if u < 0.0 || u > 1.0 {
@@ -297,8 +297,9 @@ impl SceneObject for Triangle {
             None => self.color.clone(),
 
             Some(ref texture) => {
-                todo!("Texture mapping for triangles doesnt work yet");
-                let uv_coord: MatVec<2> = self.uv_at(point);
+                // todo!("Texture mapping for triangles doesnt work yet");
+                // let uv_coord: MatVec<2> = self.uv_at(point);
+                let uv_coord: MatVec<2> = utils::barycentric_uv(point, self.verticies.to_vec(), self.texcoords.as_ref().unwrap().clone());
                 texture.sample(uv_coord)
             },
             

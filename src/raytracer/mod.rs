@@ -1,6 +1,5 @@
 use std::ops::{Add, Sub, Mul, Index};
 use std::fmt::Debug;
-use ray::Ray;
 
 // For now MatVec represents a 'Mathematical Vector'
 // In needed, I will change this to be a 'Matrix Vector',
@@ -268,7 +267,7 @@ pub enum ProjectionType {
     FLAT,
     FISHEYE,
     PANORAMIC,
-    DOF,
+    // DOF,
 
 }
 
@@ -276,7 +275,6 @@ pub struct CameraState {
 
     pub width: u32,
     pub height: u32,
-    pub position: MatVec<3>,
     pub forward: MatVec<3>,
     pub up: MatVec<3>,
     pub eye: MatVec<3>,
@@ -291,7 +289,6 @@ impl CameraState {
         CameraState {
             width,
             height,
-            position: MatVec::new(vec![0.0, 0.0, 0.0]),
             forward: MatVec::new(vec![0.0, 0.0, -1.0]),
             up: MatVec::new(vec![0.0, 1.0, 0.0]),
             eye: MatVec::new(vec![0.0, 0.0, 0.0]),
@@ -303,7 +300,7 @@ impl CameraState {
 }
 
 pub struct LightResidual {
-    pub source_id: Option<usize>,
+    pub source_id: Option<usize>, // TODO: Will be used in reflections
     pub color: Color,
     pub intensity: f32,
     pub direction: MatVec<3>,
