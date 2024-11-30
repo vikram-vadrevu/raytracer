@@ -4,4 +4,5 @@ suns
 # lenses
 plane
 triangle
+map
 bulb

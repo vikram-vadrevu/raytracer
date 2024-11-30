@@ -98,3 +98,14 @@ pub fn appy_exposure(color: &RGBA, exposure: f32) -> RGBA {
     MatVec::new(to_return)
 
 }
+
+pub fn spherical_world_to_uv(point: &MatVec<3>, center: &MatVec<3>, radius: f32) -> MatVec<2> {
+    let translated_point = point.clone() - center.clone();
+    let phi: f32 = f32::atan2(*translated_point.get(2), *translated_point.get(0));
+    let theta: f32 = f32::acos(*translated_point.get(1) / radius);
+
+    let u: f32 = 1.0 - (phi + std::f32::consts::PI) / (2.0 * std::f32::consts::PI);
+    let v: f32 = theta / std::f32::consts::PI;
+
+    MatVec::new(vec![u, v])
+}

@@ -238,7 +238,9 @@ pub struct Intersection {
 pub struct InputState {
 
     color: Color,
-    // texcoord: MatVec,
+    texture: String,
+    verticies: Vec<MatVec<3>>,
+    texcoords: Vec<MatVec<2>>,
     // texture: String,
     // roughness: f32,
     // shininess: f32,
@@ -252,6 +254,9 @@ impl InputState {
     pub fn new() -> InputState {
         InputState {
             color: MatVec::new(vec![1.0, 1.0, 1.0]),
+            texture: "none".to_string(),
+            verticies: Vec::new(),
+            texcoords: Vec::new(),
         }
     }
 
@@ -332,4 +337,5 @@ mod scene;
 mod shapes;
 mod light_sources;
 mod utils;
+mod texture;
 // mod materials;

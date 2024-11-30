@@ -1,26 +1,40 @@
-use crate::raytracer::{MatVec, InputState, Intersection, IntersectionPayload, Color};
+use crate::raytracer::{texture, Color, InputState, Intersection, IntersectionPayload, MatVec};
 use crate::raytracer::scene::SceneObject;
 use crate::raytracer::ray::Ray;
 use crate::raytracer::utils;
+use crate::raytracer::texture::Texture2d;
 
 /// Represents a sphere in 3D space.
 pub struct Sphere {
     pub center: MatVec<3>,
     pub radius: f32,
     pub color: Color,
+    pub texture: Option<Texture2d>,
     // pub material: Material,
 }
 
 impl Sphere {
+
     pub fn new(center: MatVec<3>, radius: f32, context: &InputState) -> Sphere {
+
         println!("Making sphere with center: {:?}, radius: {:?}, color: {:?}", center, radius, context.color);
+
+        // Function assumes that the texture path in the context is valid and exists
+        let texture: Option<Texture2d> = match context.texture.as_str() {
+            "none" => None,
+            _ => Some(Texture2d::new(&context.texture)),
+        };
+
         Sphere {
             center,
             radius,
             color: context.color.clone(),
+            texture,
             // material,
         }
+
     }
+
 }
 
 impl SceneObject for Sphere {
@@ -31,7 +45,6 @@ impl SceneObject for Sphere {
         // println!("center: {:?}", self.center);
         // println!("radius: {:?}", self.radius);
 
-        println!("Inside: {:?}",(self.center.clone() - ray.origin.clone()).magnitude());
         let inside: bool = (self.center.clone() - ray.origin.clone()).magnitude() < self.radius;
 
         // println!("inside: {}", inside);
@@ -75,15 +88,21 @@ impl SceneObject for Sphere {
 
     }
 
-    fn color_at(&self, _point: &MatVec<3>) -> Color {
+    fn color_at(&self, point: &MatVec<3>) -> Color {
 
-        self.color.clone()
-
+        match self.texture {
+            None => self.color.clone(),
+            Some(ref texture) => {
+                let uv_coord: MatVec<2> = utils::spherical_world_to_uv(point, &self.center, self.radius);
+                texture.sample(uv_coord)
+            },
+        }
     }
 
 }
 
 /// Represents a plane in 3D space.
+#[allow(non_snake_case)]
 pub struct Plane {
     pub normal: MatVec<3>,
     pub D: f32,
@@ -91,6 +110,7 @@ pub struct Plane {
 }
 
 impl Plane {
+
     pub fn new(coeffs: MatVec<4>, context: &InputState) -> Plane {
         println!("Making plane with coeffs: {:?}, color: {:?}", coeffs, context.color);
         Plane {
@@ -99,6 +119,7 @@ impl Plane {
             color: context.color.clone(),
         }
     }
+
 }
 
 impl SceneObject for Plane {
@@ -143,17 +164,80 @@ impl SceneObject for Plane {
 pub struct Triangle {
     pub vertices: [MatVec<3>; 3],
     pub color: Color,
+    pub texture: Option<Texture2d>,
+    pub texcoords: Option<Vec<MatVec<2>>>,
 }
 
 impl Triangle {
-    pub fn new(vertices: Vec<MatVec<3>>, context: &InputState) -> Triangle {
-        assert_eq!(vertices.len(), 3, "Triangle must have exactly 3 vertices");
-        println!("Making triangle with vertices: {:?}, color: {:?}", vertices, context.color);
+    pub fn new(indices: Vec<i32>, context: &InputState) -> Triangle {
+        assert_eq!(indices.len(), 3, "Triangle must have exactly 3 vertices");
+        println!("Making triangle with vertices: {:?}, color: {:?}", indices, context.color);
+
+        let vertices: Vec<MatVec<3>> = indices.iter().map(|&i| {
+            if i < 0 {
+                context.verticies[(context.verticies.len() as i32 + i) as usize].clone()
+            } else {
+                context.verticies[(i - 1) as usize].clone()
+            }
+        }).collect();
+
+        let texcoords: Option<Vec<MatVec<2>>> = if context.texture != "none" && !context.texcoords.is_empty() {
+            Some(indices.iter().map(|&i| {
+            if i < 0 {
+                context.texcoords[(context.texcoords.len() as i32 + i) as usize].clone()
+            } else {
+                context.texcoords[(i - 1) as usize].clone()
+            }
+            }).collect())
+        } else {
+            None
+        };
+
+        let texture: Option<Texture2d> = match context.texture.as_str() {
+            "none" => None,
+            _ => {
+                Some(Texture2d::new(&context.texture))
+            },
+        };
+
         Triangle {
             vertices: [vertices[0].clone(), vertices[1].clone(), vertices[2].clone()],
             color: context.color.clone(),
+            texture,
+            texcoords,
         }
     }
+
+    fn uv_at(&self, point: &MatVec<3>) -> MatVec<2> {
+        let texcoords = self.texcoords.as_ref().unwrap();
+        let v0 = self.vertices[1].clone() - self.vertices[0].clone();
+        let v1 = self.vertices[2].clone() - self.vertices[0].clone();
+        let v2 = point.clone() - self.vertices[0].clone();
+    
+        // Compute dot products for the barycentric coordinates
+        let d00 = v0.dot(v0.clone());
+        let d01 = v0.dot(v1.clone());
+        let d11 = v1.dot(v1.clone());
+        let d20 = v2.dot(v0.clone());
+        let d21 = v2.dot(v1.clone());
+    
+        // Compute the denominator of the barycentric coordinates
+        let denom = d00 * d11 - d01 * d01;
+    
+        if denom.abs() < 1e-6 {
+            panic!("Triangle vertices are degenerate or too close together!");
+        }
+    
+        // Barycentric coordinates
+        let v = (d11 * d20 - d01 * d21) / denom;
+        let w = (d00 * d21 - d01 * d20) / denom;
+        let u = 1.0 - v - w;
+    
+        // Interpolate the UV coordinates using barycentric weights
+        texcoords[0].clone() * u + texcoords[1].clone() * v + texcoords[2].clone() * w
+    }
+    
+
 }
 
 impl SceneObject for Triangle {
@@ -207,9 +291,18 @@ impl SceneObject for Triangle {
             
     }
 
-    fn color_at(&self, _point: &MatVec<3>) -> Color {
+    fn color_at(&self, point: &MatVec<3>) -> Color {
+        match self.texture {
 
-        self.color.clone()
+            None => self.color.clone(),
+
+            Some(ref texture) => {
+                todo!("Texture mapping for triangles doesnt work yet");
+                let uv_coord: MatVec<2> = self.uv_at(point);
+                texture.sample(uv_coord)
+            },
+            
+        }
 
     }
 

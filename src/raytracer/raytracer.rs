@@ -17,6 +17,7 @@ pub struct RayTracer {
     image: RgbaImage,
     camera: CameraState,
     verticies: Vec<MatVec<3>>,
+    texcoord: Vec<MatVec<2>>,
 
 }
 
@@ -35,9 +36,11 @@ impl RayTracer {
             image: ImageBuffer::new(width, height),
             camera : CameraState::new(width, height),
             verticies: Vec::new(),
+            texcoord: Vec::new(),
         }
     }
 
+    #[allow(unreachable_code)]
     pub fn render_from_file(file_path: &str) {
         println!("Rendering from file: {}", file_path);
         let file = File::open(file_path).expect("File not found");
@@ -63,6 +66,7 @@ impl RayTracer {
         let mut raytracer = RayTracer::new(width, height);        
 
         for i in 1..lines.len() {
+
             let line: &String = &lines[i];
             if line.is_empty() || line.starts_with("#") {
                 continue;
@@ -73,6 +77,7 @@ impl RayTracer {
             let elements: Vec<String> = delimitted[1..delimitted.len()].to_vec();
             
             match action.as_str() {
+
                 "sphere" => {
                     let center = MatVec::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap(),
@@ -82,6 +87,7 @@ impl RayTracer {
                     let obj = Sphere::new(center, radius, &raytracer.input_state);
                     raytracer.scene.add_shape(Box::new(obj));
                 },
+
                 "sun" => {
                     let direction = MatVec::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap(),
@@ -89,37 +95,50 @@ impl RayTracer {
                     let obj = Sun::new(direction, &raytracer.input_state);
                     raytracer.scene.add_light_source(Box::new(obj));
                 },
+
                 "color" => {
                     let color = MatVec::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap(),
                                                   elements[2].parse().unwrap()]);
                     raytracer.input_state.color = color;
                 },
+
                 "expose" => {
                     let exposure = elements[0].parse().unwrap();
                     raytracer.camera.exposure = Some(exposure);
                 },
+
                 "up" => {
-                    let up = MatVec::new(vec![elements[0].parse().unwrap(),
+                    let up:MatVec<3> = MatVec::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap(),
                                                   elements[2].parse().unwrap()]);
                     raytracer.camera.up = up;
                 },
+
                 "eye" => {
-                    let eye = MatVec::new(vec![elements[0].parse().unwrap(),
+                    let eye: MatVec<3> = MatVec::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap(),
                                                   elements[2].parse().unwrap()]);
                     raytracer.camera.eye = eye;
                 },
+
                 "forward" => {
-                    let forward = MatVec::new(vec![elements[0].parse().unwrap(),
+                    let forward: MatVec<3> = MatVec::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap(),
                                                   elements[2].parse().unwrap()]);
                     raytracer.camera.forward = forward;
                 },
+
                 "fisheye" => {
+                    todo!("Fisheye doesnt work rn");
                     raytracer.camera.projection = ProjectionType::FISHEYE;
                 },
+
+                "panorama" => {
+                    todo!("Panorama doesnt work rn");
+                    raytracer.camera.projection = ProjectionType::PANORAMIC;
+                },
+
                 "plane" => {
                     let coeffs = MatVec::<4>::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap(),
@@ -128,24 +147,20 @@ impl RayTracer {
                     let obj = Plane::new(coeffs, &raytracer.input_state);
                     raytracer.scene.add_shape(Box::new(obj));
                 },
+
                 "xyz" => {
                     let vertex = MatVec::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap(),
                                                   elements[2].parse().unwrap()]);
-                    raytracer.verticies.push(vertex);
+                    raytracer.input_state.verticies.push(vertex);
                 },
+
                 "tri" => {
-                    let indices: Vec<isize> = elements.iter().map(|e| e.parse().unwrap()).collect();
-                    let vertices: Vec<MatVec<3>> = indices.iter().map(|&i| {
-                        if i < 0 {
-                            raytracer.verticies[(raytracer.verticies.len() as isize + i) as usize].clone()
-                        } else {
-                            raytracer.verticies[(i - 1) as usize].clone()
-                        }
-                    }).collect();
-                    let obj = Triangle::new(vertices, &raytracer.input_state);
+                    let indices: Vec<i32> = elements.iter().map(|e| e.parse().unwrap()).collect();
+                    let obj = Triangle::new(indices, &raytracer.input_state);
                     raytracer.scene.add_shape(Box::new(obj));
                 },
+
                 "bulb" => {
                     let position = MatVec::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap(),
@@ -153,15 +168,30 @@ impl RayTracer {
                     let obj = Bulb::new(position, &raytracer.input_state);
                     raytracer.scene.add_light_source(Box::new(obj));
                 }
+
+                "texture" => {
+                    let texture: String = elements[0].clone();
+                    raytracer.input_state.texture = texture;
+                }
+
+                "texcoord" => {
+                    let texcoord = MatVec::new(vec![elements[0].parse().unwrap(),
+                                                  elements[1].parse().unwrap()]);
+                    raytracer.input_state.texcoords.push(texcoord);
+                }
+
                 _ => {
                     println!("Invalid action: {}", action);
                     std::process::exit(1);
                 }
+
             }
 
         }    
+
         raytracer.render();
         raytracer.save_image(out_file);
+
     }
 
     pub fn render(&mut self) -> bool {
