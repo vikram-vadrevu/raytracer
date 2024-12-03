@@ -35,7 +35,6 @@ pub fn lambert(base_color: &Light, ilumination_sources: &Vec<LightResidual>) -> 
 
     }
 
-    println!("Total color: {:?}", total);
     color_to_rgba(total, 1.0f32)
 }
 
@@ -99,6 +98,10 @@ pub fn appy_exposure(color: &RGBA, exposure: f32) -> RGBA {
 
 }
 
+/// Computes the UV texture coordinates of a point on a sphere.
+/// Given a point in 3D space (that belongs on the given sphere), and the center and radius of the sphere,
+/// computes the UV coordinates of the point in normalized texture coordinates.
+/// The point is first converted to a longitude and latitude, and then the UV coordinates are computed.
 pub fn spherical_world_to_uv(point: &MatVec<3>, center: &MatVec<3>, radius: f32) -> MatVec<2> {
     let translated_point = point.clone() - center.clone();
     let phi: f32 = f32::atan2(*translated_point.get(2), *translated_point.get(0));
@@ -110,10 +113,14 @@ pub fn spherical_world_to_uv(point: &MatVec<3>, center: &MatVec<3>, radius: f32)
     MatVec::new(vec![u, v])
 }
 
+
+/// Cmputes the UV texture coordinates of a point in a triangle.
+/// Given a point in 3D space (that belongs on the given triangle), and the texcoords of the triangle,
+/// computes the UV coordinates of the point in normalized texture coordinates.
 pub fn barycentric_uv(point: &MatVec<3>, verticies: Vec<MatVec<3>>, texcoords: Vec<MatVec<2>>) -> MatVec<2> {
-    let v0 = verticies[1].clone() - verticies[0].clone();
-    let v1 = verticies[2].clone() - verticies[0].clone();
-    let v2 = point.clone() - verticies[0].clone();
+    let v0: MatVec<3> = verticies[1].clone() - verticies[0].clone();
+    let v1: MatVec<3>  = verticies[2].clone() - verticies[0].clone();
+    let v2: MatVec<3>  = point.clone() - verticies[0].clone();
     
     let d00 = v0.dot(v0.clone());
     let d01 = v0.dot(v1.clone());

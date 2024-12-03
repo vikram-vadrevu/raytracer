@@ -10,6 +10,7 @@ pub struct Sphere {
     pub radius: f32,
     pub color: Color,
     pub texture: Option<Texture2d>,
+    pub shininess: Option<Vec<f32>>,
     // pub material: Material,
 }
 
@@ -25,11 +26,25 @@ impl Sphere {
             _ => Some(Texture2d::new(&context.texture)),
         };
 
+        let shininess: Option<Vec<f32>> = match context.shininess.is_empty() {
+            true => None,
+            false => {
+                if context.shininess.len() == 3 {
+                    Some(context.shininess.clone())
+                } else if context.shininess.len() == 1 {
+                    Some(vec![context.shininess[0]; 3])
+                } else {
+                    None
+                }
+            }
+        };
+
         Sphere {
             center,
             radius,
             color: context.color.clone(),
             texture,
+            shininess,
             // material,
         }
 
@@ -97,6 +112,10 @@ impl SceneObject for Sphere {
                 texture.sample(uv_coord)
             },
         }
+    }
+
+    fn shininess(&self) -> Option<Vec<f32>> {
+        self.shininess.clone()
     }
 
 }

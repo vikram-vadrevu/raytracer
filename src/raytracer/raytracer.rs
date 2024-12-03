@@ -24,7 +24,7 @@ impl RayTracer {
 
     pub fn new(height: u32, width: u32) -> RayTracer {
         let scene = scene::Scene::new();
-        let default_bounce_limit = 1;
+        let default_bounce_limit = 4;
         RayTracer {
             scene,
             height,
@@ -36,7 +36,7 @@ impl RayTracer {
         }
     }
 
-    #[allow(unreachable_code)]
+    // #[allow(unreachable_code)]
     pub fn render_from_file(file_path: &str) {
         println!("Rendering from file: {}", file_path);
         let file = File::open(file_path).expect("File not found");
@@ -159,27 +159,30 @@ impl RayTracer {
 
                 "bulb" => {
                     let position = MatVec::new(vec![elements[0].parse().unwrap(),
-                                                  elements[1].parse().unwrap(),
-                                                  elements[2].parse().unwrap()]);
+                                                    elements[1].parse().unwrap(),
+                                                    elements[2].parse().unwrap()]);
                     let obj = Bulb::new(position, &raytracer.input_state);
                     raytracer.scene.add_light_source(Box::new(obj));
-                }
+                },
 
                 "texture" => {
                     let texture: String = elements[0].clone();
                     raytracer.input_state.texture = texture;
-                }
+                },
 
                 "texcoord" => {
                     let texcoord = MatVec::new(vec![elements[0].parse().unwrap(),
                                                   elements[1].parse().unwrap()]);
                     raytracer.input_state.texcoords.push(texcoord);
-                }
-
+                },
+                "shininess" => {
+                    let shine: Vec<f32> = elements.iter().map(|e| e.parse().unwrap()).collect();
+                    raytracer.input_state.shininess = shine;
+                },
                 _ => {
                     println!("Invalid action: {}", action);
                     std::process::exit(1);
-                }
+                },
 
             }
 
@@ -198,7 +201,7 @@ impl RayTracer {
                 let ray = Ray::generate_primary_ray(MatVec::new(vec![x as f32, y as f32]), &self.camera);
                 // print!("Ray: {:?}", ray);
 
-                let mut pixel_color: RGBA = self.scene.trace_through_scene(&ray, self.bounce_limit);
+                let mut pixel_color: RGBA = self.scene.trace_ray(&ray, self.bounce_limit);
 
                 if self.camera.exposure.is_some() {
 

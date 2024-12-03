@@ -165,6 +165,8 @@ impl<const N: usize> Clone for MatVec<N> {
     }
 }
 
+impl<const N: usize> Copy for MatVec<N> {}
+
 impl<const N: usize> Add for MatVec<N> {
     type Output = MatVec<N>;
 
@@ -223,7 +225,7 @@ impl<const N: usize> Index<usize> for MatVec<N> {
 
 // Other Commonly used types and constructors
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Intersection {
 
     pub shape_id: Option<usize>, // Index of the shape in the scene
@@ -242,7 +244,7 @@ pub struct InputState {
     texcoords: Vec<MatVec<2>>,
     // texture: String,
     // roughness: f32,
-    // shininess: f32,
+    shininess: Vec<f32>,
     // transparency: f32,
     // index_of_refraction: f32,
 
@@ -256,6 +258,7 @@ impl InputState {
             texture: "none".to_string(),
             verticies: Vec::new(),
             texcoords: Vec::new(),
+            shininess: Vec::new(),
         }
     }
 
@@ -335,4 +338,4 @@ mod shapes;
 mod light_sources;
 mod utils;
 mod texture;
-// mod materials;
+mod material;

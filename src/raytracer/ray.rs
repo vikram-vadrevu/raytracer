@@ -100,4 +100,15 @@ impl Ray {
 
         Ray::new(origin, dir)
     }
+
+    /// Phong reflection model
+    pub fn generate_reflection_ray(intersection: &Intersection, incoming_ray: &Ray) -> Ray {
+        let origin = intersection.point.clone();
+        let normal = intersection.normal.clone();
+        let direction = incoming_ray.direction.clone();
+        let reflection = direction  - 2.0 * direction.dot(normal) * normal;
+
+        Ray::new(origin, reflection)
+    }
+
 }
