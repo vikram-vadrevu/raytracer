@@ -9,4 +9,6 @@ barycentric
 bulb
 reflect
 # refract         
-rough 
+rough
+antialias
+focus

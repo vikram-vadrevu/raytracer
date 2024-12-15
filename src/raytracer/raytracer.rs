@@ -204,6 +204,11 @@ impl RayTracer {
                     let aa: u32 = elements[0].parse().unwrap();
                     raytracer.anti_aliasing = aa;
                 },
+                "dof" => {
+                    let focal_length: f32 = elements[0].parse().unwrap();
+                    let aperture: f32 = elements[1].parse().unwrap();
+                    raytracer.camera.dof = Some(MatVec::new(vec![focal_length, aperture]));
+                },
                 _ => {
                     println!("Invalid action: {}", action);
                     std::process::exit(1);

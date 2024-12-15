@@ -1,5 +1,6 @@
 use crate::raytracer::{CameraState, Intersection, MatVec, ProjectionType};
 use crate::raytracer::scene::LightSource;
+use rand::Rng;
 
 /// Represents a ray in 3D space.
 /// The actual creating of rays is done through the
@@ -47,7 +48,28 @@ impl Ray {
                 let up: MatVec<3> = right.cross(&forward).normalize();
 
                 // Construct the ray direction
-                Ray::new(eye, (forward + (s_x * right) + (s_y * up)).normalize())
+                let mut ray = Ray::new(eye.clone(), (forward + (s_x * right) + (s_y * up)).normalize());
+
+                // Apply depth of field if enabled
+                if let Some(dof_params) = &context.dof {
+                    let focus = dof_params[0];
+                    let lens_radius = dof_params[1];
+
+                    // Randomly perturb the ray's origin and direction
+                    let mut rng = rand::thread_rng();
+                    let rand_x: f32 = rng.gen_range(-1.0..1.0);
+                    let rand_y: f32 = rng.gen_range(-1.0..1.0);
+
+                    let lens_offset = lens_radius * (rand_x * right + rand_y * up);
+                    let new_origin = eye + lens_offset;
+
+                    let focal_point = ray.origin + focus * ray.direction;
+                    let new_direction = (focal_point - new_origin).normalize();
+
+                    ray = Ray::new(new_origin, new_direction);
+                }
+
+                ray
 
             },
 
@@ -61,10 +83,10 @@ impl Ray {
                 }
 
                 let eye: MatVec<3> = context.eye.clone();
-                let forward: MatVec<3> = context.forward.clone().normalize();
-                let up: MatVec<3> = context.up.normalize();
-                let right: MatVec<3> = forward.cross(&up).normalize();
-
+                let forward: MatVec<3> = context.forward.clone();
+                let arbitrary_up = context.up.clone().normalize();
+                let right: MatVec<3> = forward.cross(&arbitrary_up).normalize();
+                let up: MatVec<3> = right.cross(&forward).normalize();
                 let direction = (f32::sqrt(1.0 - s_x.powi(2) - s_y.powi(2)) * forward + s_x * right + s_y * up).normalize();
 
                 Ray::new(eye, direction)
@@ -76,10 +98,10 @@ impl Ray {
                 let phi: f32 = ((context.height as f32 - through_pixel[1]) / context.height as f32) * std::f32::consts::PI - (std::f32::consts::PI / 2.0);
             
                 let eye: MatVec<3> = context.eye.clone();
-                let forward: MatVec<3> = context.forward.clone().normalize();
-                let up: MatVec<3> = context.up.normalize();
-                let right: MatVec<3> = forward.cross(&up).normalize();
-            
+                let forward: MatVec<3> = context.forward.clone();
+                let arbitrary_up = context.up.clone().normalize();
+                let right: MatVec<3> = forward.cross(&arbitrary_up).normalize();
+                let up: MatVec<3> = right.cross(&forward).normalize();
                 let direction = (theta.cos() * phi.cos() * forward + theta.sin() * phi.cos() * right + phi.sin() * up).normalize();
             
                 Ray::new(eye, direction)
