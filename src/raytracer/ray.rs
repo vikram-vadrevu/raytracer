@@ -36,16 +36,9 @@ impl Ray {
                 let s_y: f32 = ((context.height as f32) - (2.0 * through_pixel[1])) / (u32::max(context.width, context.height) as f32);
 
                 let eye: MatVec<3> = context.eye.clone();
-                let forward: MatVec<3> = context.forward.clone().normalize();
+                let forward: MatVec<3> = context.forward.clone();
 
-                // Choose an arbitrary up vector not parallel to forward
-                let arbitrary_up: MatVec<3> = if forward[0].abs() < forward[1].abs() && forward[0].abs() < forward[2].abs() {
-                    MatVec::new(vec![1.0, 0.0, 0.0])
-                } else if forward[1].abs() < forward[2].abs() {
-                    MatVec::new(vec![0.0, 1.0, 0.0])
-                } else {
-                    MatVec::new(vec![0.0, 0.0, 1.0])
-                };
+                let arbitrary_up = context.up.clone().normalize();
 
                 // Compute the right vector
                 let right: MatVec<3> = forward.cross(&arbitrary_up).normalize();
@@ -60,33 +53,38 @@ impl Ray {
 
             ProjectionType::FISHEYE => {
 
-                let s_x: f32 = ((2.0*through_pixel[0]) - (context.width as f32)) / (u32::max(context.width, context.height) as f32);
-                let s_y: f32 = ((context.height as f32) - (2.0*through_pixel[1])) / (u32::max(context.width, context.height) as f32);
+                let s_x: f32 = ((2.0 * through_pixel[0]) - (context.width as f32)) / (u32::max(context.width, context.height) as f32);
+                let s_y: f32 = ((context.height as f32) - (2.0 * through_pixel[1])) / (u32::max(context.width, context.height) as f32);
 
-                let eye: MatVec<3> = context.eye.clone();
-                let mut forward: MatVec<3> = context.forward.clone();
-                let up: MatVec<3> = context.up.normalize();
-                let right: MatVec<3> = forward.cross(&up).normalize();
-
-                forward = f32::sqrt(1.0f32 - (s_x.powi(2) - s_y.powi(2))) * forward;
-
-                Ray::new(eye, (forward + ((s_x * right) + (s_y * up))).normalize())
-
-            }
-
-            ProjectionType::PANORAMIC => {
-                let s_x: f32 = (through_pixel[0] / context.width as f32) * 2.0 * std::f32::consts::PI;
-                let s_y: f32 = (through_pixel[1] / context.height as f32) * std::f32::consts::PI;
+                if s_x.powi(2) + s_y.powi(2) > 1.0 {
+                    return Ray::new(MatVec::new(vec![0.0, 0.0, 0.0]), MatVec::new(vec![0.0, 0.0, 0.0])); // No ray
+                }
 
                 let eye: MatVec<3> = context.eye.clone();
                 let forward: MatVec<3> = context.forward.clone().normalize();
                 let up: MatVec<3> = context.up.normalize();
                 let right: MatVec<3> = forward.cross(&up).normalize();
 
-                let direction = (s_y.cos() * (s_x.cos() * right + s_x.sin() * up) + s_y.sin() * forward).normalize();
+                let direction = (f32::sqrt(1.0 - s_x.powi(2) - s_y.powi(2)) * forward + s_x * right + s_y * up).normalize();
 
                 Ray::new(eye, direction)
+
             }
+
+            ProjectionType::PANORAMIC => {
+                let theta: f32 = (through_pixel[0] / context.width as f32) * 2.0 * std::f32::consts::PI - std::f32::consts::PI;
+                let phi: f32 = ((context.height as f32 - through_pixel[1]) / context.height as f32) * std::f32::consts::PI - (std::f32::consts::PI / 2.0);
+            
+                let eye: MatVec<3> = context.eye.clone();
+                let forward: MatVec<3> = context.forward.clone().normalize();
+                let up: MatVec<3> = context.up.normalize();
+                let right: MatVec<3> = forward.cross(&up).normalize();
+            
+                let direction = (theta.cos() * phi.cos() * forward + theta.sin() * phi.cos() * right + phi.sin() * up).normalize();
+            
+                Ray::new(eye, direction)
+            }
+            
 
             _ => todo!("Projection type {:?} is not yet supported", context.projection),
         }
@@ -101,14 +99,56 @@ impl Ray {
         Ray::new(origin, dir)
     }
 
+    // /// Phong reflection model
+    // pub fn generate_reflection_ray(intersection: &Intersection, incoming_ray: &Ray) -> Ray {
+    //     let origin = intersection.point.clone();
+    //     let normal = intersection.normal.clone();
+    //     let direction = incoming_ray.direction.clone();
+    //     let reflection = direction  - 2.0 * direction.dot(normal) * normal;
+    //
+    //     Ray::new(origin, reflection.normalize())
+    // }
+
     /// Phong reflection model
     pub fn generate_reflection_ray(intersection: &Intersection, incoming_ray: &Ray) -> Ray {
+        
+        // Slightly offset the origin to prevent self-intersection
         let origin = intersection.point.clone();
-        let normal = intersection.normal.clone();
-        let direction = incoming_ray.direction.clone();
-        let reflection = direction  - 2.0 * direction.dot(normal) * normal;
+
+        // Ensure the normal and incoming direction are normalized
+        let normal = intersection.normal.normalize();
+        let direction = incoming_ray.direction.normalize();
+
+        // Calculate reflection direction
+        let dot = direction.dot(normal).clamp(-1.0, 1.0); // Clamp for numerical stability
+        let reflection = (direction - 2.0 * dot * normal).normalize();
 
         Ray::new(origin, reflection)
+
     }
 
+
+    pub fn generate_refraction_ray(intersection: &Intersection, incoming_ray: &Ray, ior: f32) -> Ray {
+        let mut normal = intersection.normal.clone();
+        let mut eta = 1.0 / ior; // Assume ray is entering the material
+
+        // Check if the ray is exiting the material
+        if incoming_ray.direction.dot(normal) > 0.0 {
+            normal = -1.0f32 * normal;
+            eta = ior;
+        }
+
+        let cos_i = -normal.dot(incoming_ray.direction.clone()).clamp(-1.0, 1.0);
+        let sin_t2 = eta * eta * (1.0 - cos_i * cos_i);
+
+        // Total internal reflection
+        if sin_t2 > 1.0 {
+            return Ray::generate_reflection_ray(intersection, incoming_ray);
+        }
+
+        let cos_t = (1.0 - sin_t2).sqrt();
+        let refraction = eta * incoming_ray.direction + (eta * cos_i - cos_t) * normal;
+        let origin = intersection.point.clone();
+        Ray::new(origin, refraction.normalize())
+    }
 }

@@ -19,7 +19,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["data/ray-shine1.txt"],
+            "args": ["data/ray-shadow-bulb.txt"],
             "cwd": "${workspaceFolder}"
         },
         {

@@ -1,7 +1,7 @@
 exposure
 suns
 # camera
-# lenses
+lenses
 plane
 triangle
 map
@@ -9,4 +9,4 @@ barycentric
 bulb
 reflect
 # refract         
-# rough 
+rough 

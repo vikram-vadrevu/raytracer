@@ -9,9 +9,16 @@ use crate::raytracer::utils;
 pub trait SceneObject {
     fn intersect(&self, ray: &Ray) -> IntersectionPayload;
     fn color_at(&self, point: &MatVec<3>) -> Color;
-    fn shininess(&self) -> Option<Vec<f32>> { None }
-    fn transparency(&self) -> Option<f32> { None }
 
+    // TODO: Restructure these things to be propogated by the Objects themselves
+    // IE I want the computations to be handled by each implementation of the SceneObject trait
+
+    // add normal, and apply roughness to the normal
+    fn propogate(&self, incident: &Ray, intersection: &Intersection) -> Ray;
+    fn shininess(&self) -> Option<Vec<f32>> { None }
+    fn transparency(&self) -> Option<Vec<f32>> { None }
+    // fn roughness(&self) -> Option<f32> { None }
+    fn ior(&self) -> f32 { 1.458 }
     // fn apply_dir_transform(&self, dir: &MatVec<3>) -> MatVec<3>;
     // fn apply_light_transform(&self, light: &MatVec<3>) -> MatVec<3>;
 }
@@ -166,112 +173,84 @@ impl Scene {
         minimum_intersection
     }
 
-
+    /// Traces a ray through the scene and returns the color at the intersection
+    /// of the primary ray and its collision in the scene.
+    /// Utilizes the `_recursive_raytrace` method to handle recursive raytracing.
     pub fn trace_ray(&self, ray: &Ray, bounce_limit: u32) -> RGBA {
         self._recursive_raytrace(ray,  &None, bounce_limit)
     }
 
-    // /// Traces a ray through the scene and returns the color at the intersection
-    // /// of the primary ray and its collision in the scene.
-    // /// In the future, this method will be used to trace secondary rays as well.
-    // fn _simple_raytrace(&self, ray: &Ray, bounce_limit: u32) -> RGBA {
-    //     // cast primary ray
-    //     let primary_colision: IntersectionPayload = self.find_minimum_intersection_with_point(ray, &None);
-
-    //     if primary_colision.is_none() {
-    //         return MatVec::new(vec![0.0, 0.0, 0.0, 0.0]);
-    //     }
-
-    //     let colision: Intersection = primary_colision.unwrap(); // consume the payload
-
-    //     let shape_id: usize = colision.shape_id.unwrap();
-    //     let mut color: Color = self.shapes[shape_id].color_at(&colision.point);
-        
-    //     let ilumination_sources: Vec<LightResidual> = self._find_light_sources(&colision);
-
-    //     // In a shadow
-    //     if ilumination_sources.is_empty() {
-    //         return MatVec::new(vec![0.0, 0.0, 0.0, 1.0]);
-    //     }
-
-    //     // if self.shapes[shape_id].shiny {
-    //     //     let reflection: Ray = Ray::generate_reflection_ray(&colision, ray);
-    //     //     let reflection_color: RGBA = self.trace_through_scene(&reflection, bounce_limit - 1);
-
-    //     //     // Combine reflection color with base color using per-channel shininess
-    //     //     let coeffs = self.shapes[shape_id].shininess;
-    //     //     for i in 0..3 { // Assuming RGBA, modify RGB channels
-    //     //         color[i] = (1.0 - coeffs) * color[i] + coeffs * reflection_color[i];
-    //     //     }
-    //     // }
-
-    //     // // Handle transparency
-    //     // if let Some(transparency) = self.shapes[shape_id].transparency() {
-    //     //     if transparency > 0.0 && bounce_limit > 0 {
-    //     //     let refraction_ray = Ray::generate_refraction_ray(&colision, ray, self.shapes[shape_id].ior());
-    //     //     let refraction_color = self.trace_through_scene(&refraction_ray, bounce_limit - 1);
-
-    //     //     // Combine refraction color with base color using per-channel transparency
-    //     //     for i in 0..3 { // Assuming RGBA, modify RGB channels
-    //     //         color[i] = (1.0 - transparency) * color[i] + transparency * refraction_color[i];
-    //     //     }
-    //     //     }
-    //     // }
-
-    //     // Handle shininess
-    //     if let Some(shininess) = self.shapes[shape_id].shininess() {
-    //         if !shininess.is_empty() && bounce_limit > 0 {
-    //         let reflection_ray = Ray::generate_reflection_ray(&colision, ray);
-    //         let reflection_color = self.trace_through_scene(&reflection_ray, bounce_limit - 1);
-
-    //         // Combine reflection color with base color using per-channel shininess
-    //         for i in 0..3 { // Assuming RGBA, modify RGB channels
-    //             color.set(i, (1.0 - shininess[i]) * color[i] + shininess[i] * reflection_color[i]);
-    //         }
-    //         }
-    //     }
-
-
-    //     return utils::lambert(&color, &ilumination_sources);
-    // }
-
-
+    /// Recursive implementation of raytracing, with support for reflections and transparency.
     fn _recursive_raytrace(&self, ray: &Ray, optional_intersection: &IntersectionPayload, bounce_limit: u32) -> RGBA {
         // cast primary ray
 
         let primary_colision: IntersectionPayload = self.find_minimum_intersection_with_point(ray, &optional_intersection);
 
         if primary_colision.is_none() {
+
             return MatVec::new(vec![0.0, 0.0, 0.0, 0.0]);
+
         }
 
         let colision: Intersection = primary_colision.unwrap(); // consume the payload
 
         let shape_id: usize = colision.shape_id.unwrap();
         let mut color: Color = self.shapes[shape_id].color_at(&colision.point);
-        
+
         let ilumination_sources: Vec<LightResidual> = self._find_light_sources(&colision);
 
         // In a shadow, return black
         if ilumination_sources.is_empty() {
+
             return MatVec::new(vec![0.0, 0.0, 0.0, 1.0]);
+
         }
 
-        // Handle shininess
-        if let Some(shininess) = self.shapes[shape_id].shininess() {
-            if !shininess.is_empty() && bounce_limit > 0 {
+        // Handle shininess and transparency
+        let shininess = self.shapes[shape_id].shininess().unwrap_or(vec![0.0, 0.0, 0.0]);
+        let transparency = self.shapes[shape_id].transparency().unwrap_or(vec![0.0, 0.0, 0.0]);
 
-                let reflection_ray = Ray::generate_reflection_ray(&colision, ray);
-                let reflection_color = self._recursive_raytrace(&reflection_ray, &Some(colision), bounce_limit - 1);
+        let mut reflection_color: Color = MatVec::new(vec![0.0, 0.0, 0.0]);
+        let mut refraction_color: Color = MatVec::new(vec![0.0, 0.0, 0.0]);
 
-                // Combine reflection color with base color using per-channel shininess
-                for i in 0..3 { // Assuming RGBA, modify RGB channels
-                    color.set(i, (1.0 - shininess[i]) * color[i] + shininess[i] * reflection_color[i]);
-                }
-            } // Base Case
+        if bounce_limit > 1 {
+            // Handle reflections
+            if shininess.iter().any(|&s| s > 0.0) {
+                let reflection_ray = Ray::generate_reflection_ray(&colision.clone(), ray);
+                reflection_color = utils::rgba_to_color(self._recursive_raytrace(&reflection_ray, &Some(colision.clone()), bounce_limit - 1));
+
+                // // Combine reflection color with base color using per-channel shininess
+                // for i in 0..3 {
+                //     color.set(i, (1.0 - shininess[i]) * color[i] + shininess[i] * reflection_color[i]);
+                // }
+            }
+
+            // Handle refractions
+            // TODO: Make sure that tranceparency is suppoed to be double applies on the in and out
+            if transparency.iter().any(|&t| t > 0.0) {
+                let mut refraction_ray = Ray::generate_refraction_ray(&colision, ray, self.shapes[shape_id].ior());
+                // utils::in_place_propogate(&mut refraction_ray);
+                let pass_through_intersection = self.find_minimum_intersection_with_point(&refraction_ray, &Some(colision.clone()));
+                refraction_color = utils::rgba_to_color(self._recursive_raytrace(&refraction_ray, &Some(colision.clone()), bounce_limit - 1));
+
+                // Combine refraction color with base color using per-channel transparency
+                // for i in 0..3 {
+                //     color.set(i, (1.0 - shininess[i]) * ((1.0 - transparency[i]) * color[i] + transparency[i] * refraction_color[i]));
+                // }
+            }
+        }
+
+        // Apply Lambertian shading
+
+        for i in 0..3 {
+            let color_val: f32 = shininess[i] * reflection_color[i]
+                                    + (1_f32 - shininess[i]) * transparency[i] * refraction_color[i]
+                                    + (1_f32 - shininess[i]) * (1_f32 - transparency[i]) * color[i];
+            color.set(i, color_val);
         }
 
         return utils::lambert(&color, &ilumination_sources);
+
     }
 
     /// Returns all light sources that illuminate an intersection

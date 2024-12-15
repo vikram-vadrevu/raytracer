@@ -3,6 +3,7 @@ use super::ray::Ray;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use image::{ImageBuffer, RgbaImage};
+use rand::Rng;
 use super::shapes::{*};
 use super::light_sources::{*};
 
@@ -12,6 +13,7 @@ pub struct RayTracer {
     height: u32,
     width: u32,
     bounce_limit: u32,
+    anti_aliasing: u32,
     // other porperties
     input_state: InputState,
     image: RgbaImage,
@@ -25,11 +27,13 @@ impl RayTracer {
     pub fn new(height: u32, width: u32) -> RayTracer {
         let scene = scene::Scene::new();
         let default_bounce_limit = 4;
+        let default_aa_limit = 0;
         RayTracer {
             scene,
             height,
             width,
             bounce_limit : default_bounce_limit,
+            anti_aliasing: default_aa_limit,
             input_state : InputState::new(),
             image: ImageBuffer::new(width, height),
             camera : CameraState::new(width, height),
@@ -126,12 +130,12 @@ impl RayTracer {
                 },
 
                 "fisheye" => {
-                    todo!("Fisheye doesnt work rn");
+                    // todo!("Fisheye doesnt work rn");
                     raytracer.camera.projection = ProjectionType::FISHEYE;
                 },
 
                 "panorama" => {
-                    todo!("Panorama doesnt work rn");
+                    // todo!("Panorama doesnt work rn");
                     raytracer.camera.projection = ProjectionType::PANORAMIC;
                 },
 
@@ -179,6 +183,27 @@ impl RayTracer {
                     let shine: Vec<f32> = elements.iter().map(|e| e.parse().unwrap()).collect();
                     raytracer.input_state.shininess = shine;
                 },
+                "bounces" => {
+                    let bounces: u32 = elements[0].parse().unwrap();
+                    raytracer.bounce_limit = bounces;
+                },
+                "ior" => {
+                    let ior: f32 = elements[0].parse().unwrap();
+                    raytracer.input_state.index_of_refraction = ior;
+                }
+                "transparency" => {
+                    todo!("Transparency not implemented yet");
+                    let transparency: Vec<f32> = elements.iter().map(|e| e.parse().unwrap()).collect();
+                    raytracer.input_state.transparency = transparency;
+                },
+                "roughness" => {
+                    let roughness: f32 = elements[0].parse().unwrap();
+                    raytracer.input_state.roughness = roughness;
+                },
+                "aa" => {
+                    let aa: u32 = elements[0].parse().unwrap();
+                    raytracer.anti_aliasing = aa;
+                },
                 _ => {
                     println!("Invalid action: {}", action);
                     std::process::exit(1);
@@ -200,8 +225,13 @@ impl RayTracer {
                 
                 let ray = Ray::generate_primary_ray(MatVec::new(vec![x as f32, y as f32]), &self.camera);
                 // print!("Ray: {:?}", ray);
+                // It is ok to do this because a valid ray will always have a normalized direction
+                if ray.direction.eq(MatVec::new(vec![0.0, 0.0, 0.0])) {
+                    continue;
+                }
 
-                let mut pixel_color: RGBA = self.scene.trace_ray(&ray, self.bounce_limit);
+                // let mut pixel_color: RGBA = self.scene.trace_ray(&ray, self.bounce_limit);
+                let mut pixel_color: RGBA = self._compute_pixel_value(x, y, self.bounce_limit);
 
                 if self.camera.exposure.is_some() {
 
@@ -220,6 +250,32 @@ impl RayTracer {
         }
 
         return true;
+
+    }
+
+
+    fn _compute_pixel_value(&self, pixel_x: u32, pixel_y: u32, bounce_limit: u32) -> RGBA {
+
+        if self.anti_aliasing == 0 {
+            let ray = Ray::generate_primary_ray(MatVec::new(vec![pixel_x as f32, pixel_y as f32]), &self.camera);
+            return self.scene.trace_ray(&ray, bounce_limit);
+        }
+
+        let mut pixel_color: RGBA = MatVec::new(vec![0.0, 0.0, 0.0, 0.0]);
+
+        for _throw in 0..self.anti_aliasing {
+
+            let x = pixel_x as f32 + rand::thread_rng().gen_range(-0.5_f32..0.5_f32);
+            let y = pixel_y as f32 + rand::thread_rng().gen_range(-0.5_f32..0.5_f32);
+
+            let ray = Ray::generate_primary_ray(MatVec::new(vec![x, y]), &self.camera);
+            pixel_color = pixel_color + self.scene.trace_ray(&ray, bounce_limit);
+        }
+
+        MatVec::new(vec![pixel_color[0] / self.anti_aliasing as f32,
+                        pixel_color[1] / self.anti_aliasing as f32,
+                        pixel_color[2] / self.anti_aliasing as f32,
+                        pixel_color[3] / self.anti_aliasing as f32])
 
     }
 

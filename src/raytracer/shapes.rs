@@ -11,6 +11,8 @@ pub struct Sphere {
     pub color: Color,
     pub texture: Option<Texture2d>,
     pub shininess: Option<Vec<f32>>,
+    pub transparency: Option<Vec<f32>>,
+    pub roughness: f32,
     // pub material: Material,
 }
 
@@ -39,12 +41,29 @@ impl Sphere {
             }
         };
 
+        let transparency: Option<Vec<f32>> = match context.transparency.is_empty() {
+            true => None,
+            false => {
+            if context.transparency.len() == 3 {
+                Some(context.transparency.clone())
+            } else if context.transparency.len() == 1 {
+                Some(vec![context.transparency[0]; 3])
+            } else {
+                None
+            }
+            }
+        };
+
+
+
         Sphere {
             center,
             radius,
             color: context.color.clone(),
             texture,
             shininess,
+            transparency,
+            roughness: context.roughness,
             // material,
         }
 
@@ -53,6 +72,15 @@ impl Sphere {
 }
 
 impl SceneObject for Sphere {
+
+    fn propogate(&self, incident: &Ray, intersection: &Intersection) -> Ray {
+        // Implement the logic for propagating the ray through the sphere
+        // This is a placeholder implementation
+        Ray {
+            origin: intersection.point.clone(),
+            direction: incident.direction.clone(),
+        }
+    }
 
     fn intersect(&self, ray: &Ray) -> IntersectionPayload {
 
@@ -91,7 +119,9 @@ impl SceneObject for Sphere {
         };
 
         let intersection_point: MatVec<3> = ray.origin.clone() + t * ray.direction.clone();
-        let normal: MatVec<3> = (intersection_point.clone() - self.center.clone()).normalize();
+        let mut normal: MatVec<3> = (intersection_point.clone() - self.center.clone()).normalize();
+
+        normal = normal.perturb(0.5_f32, self.roughness).normalize();
 
         Some(Intersection {
             shape_id: None,
@@ -118,6 +148,10 @@ impl SceneObject for Sphere {
         self.shininess.clone()
     }
 
+    fn transparency(&self) -> Option<Vec<f32>> {
+        self.transparency.clone()
+    }
+
 }
 
 /// Represents a plane in 3D space.
@@ -142,6 +176,10 @@ impl Plane {
 }
 
 impl SceneObject for Plane {
+
+    fn propogate(&self, incident: &Ray, intersection: &Intersection) -> Ray {
+        todo!("not implemented yet");
+    }
     
     fn intersect(&self, ray: &Ray) -> IntersectionPayload {
 
@@ -185,6 +223,7 @@ pub struct Triangle {
     pub color: Color,
     pub texture: Option<Texture2d>,
     pub texcoords: Option<Vec<MatVec<2>>>,
+    roughness: f32,
 }
 
 impl Triangle {
@@ -224,6 +263,7 @@ impl Triangle {
             color: context.color.clone(),
             texture,
             texcoords,
+            roughness: 0.0_f32,
         }
     }
 
@@ -260,6 +300,11 @@ impl Triangle {
 }
 
 impl SceneObject for Triangle {
+
+
+    fn propogate(&self, incident: &Ray, intersection: &Intersection) -> Ray {
+        todo!("not implemented yet");
+    }
 
     fn intersect(&self, ray: &Ray) -> IntersectionPayload {
             
@@ -299,6 +344,8 @@ impl SceneObject for Triangle {
             if normal.dot(ray.direction.clone()) > 0.0 {
                 normal = -1.0f32 * normal;
             }
+
+            normal = normal.perturb(0.01, self.roughness).normalize();
     
             Some(Intersection {
                 shape_id: None,

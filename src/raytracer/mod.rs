@@ -140,6 +140,25 @@ impl<const N: usize> MatVec<N> {
         }
     }
 
+    pub fn perturb(&self, delta: f32, std_dev: f32) -> MatVec<N> {
+        let mut new_data: MatVec<N> = MatVec::new(vec![0.0; N]);
+        for i in 0..N {
+            let perturbation = utils::gaussian_sample(std_dev);
+            // println!{"Perturbation for element {}: {}", i, perturbation};
+            new_data.set(i, perturbation);
+        }
+        *self + (delta * new_data)
+    }
+
+    pub fn eq(&self, other: MatVec<N>) -> bool {
+        for i in 0..N {
+            if self.get(i) != other.get(i) {
+                return false;
+            }
+        }
+        true
+    }
+
 }
 
 // Implementations for standard traits and operators on MatVec types
@@ -243,10 +262,10 @@ pub struct InputState {
     verticies: Vec<MatVec<3>>,
     texcoords: Vec<MatVec<2>>,
     // texture: String,
-    // roughness: f32,
+    roughness: f32,
     shininess: Vec<f32>,
-    // transparency: f32,
-    // index_of_refraction: f32,
+    transparency: Vec<f32>,
+    index_of_refraction: f32,
 
 }
 
@@ -258,7 +277,10 @@ impl InputState {
             texture: "none".to_string(),
             verticies: Vec::new(),
             texcoords: Vec::new(),
+            roughness: 0.0_f32,
             shininess: Vec::new(),
+            transparency: Vec::new(),
+            index_of_refraction: 1.458_f32,
         }
     }
 
@@ -283,6 +305,7 @@ pub struct CameraState {
     pub eye: MatVec<3>,
     pub exposure: Option<f32>,
     pub projection: ProjectionType,
+    pub dof: Option<DofParams>,
 
 }
 
@@ -297,6 +320,7 @@ impl CameraState {
             eye: MatVec::new(vec![0.0, 0.0, 0.0]),
             exposure: None,
             projection: ProjectionType::FLAT,
+            dof: None,
         }
     }
 
@@ -329,6 +353,7 @@ pub type IntersectionPayload = Option<Intersection>;
 pub type RGBA = MatVec<4>;
 pub type Color = MatVec<3>;
 pub type Light = MatVec<3>;
+pub type DofParams = MatVec<2>;
 
 // Export internal modules
 pub mod raytracer;

@@ -1,5 +1,7 @@
 use crate::raytracer::MatVec;
 use super::{Light, LightResidual, RGBA, Color};
+use rand_distr::{Distribution, Normal};
+use rand::thread_rng;
 
 
 // pub fn compute_total_light(ilumination_sources: Vec<LightResidual>) -> Light {
@@ -135,4 +137,15 @@ pub fn barycentric_uv(point: &MatVec<3>, verticies: Vec<MatVec<3>>, texcoords: V
     
     let uv = texcoords[0].clone() * u + texcoords[1].clone() * v + texcoords[2].clone() * w;
     MatVec::new(vec![uv.get(0).clone(), uv.get(1).clone()])
+}
+
+
+pub fn gaussian_sample(std_dev: f32) -> f32 {
+    let normal = Normal::new(0.0, std_dev).unwrap();
+    let mut rng = thread_rng();
+    normal.sample(&mut rng)
+}
+
+pub fn rgba_to_color(rgba: RGBA) -> Color {
+    MatVec::new(vec![*rgba.get(0), *rgba.get(1), *rgba.get(2)])
 }
