@@ -8,7 +8,7 @@ debug:
 	cargo run $(file)
 
 run:
-	./target/release/raytracer $(file)
+	cargo run --release $(file)
 
 clean:
 	cargo clean
