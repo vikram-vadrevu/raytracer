@@ -40,7 +40,7 @@ impl RayTracer {
         }
     }
 
-    // #[allow(unreachable_code)]
+    #[allow(unreachable_code)]
     pub fn render_from_file(file_path: &str) {
         println!("Rendering from file: {}", file_path);
         let file = File::open(file_path).expect("File not found");
@@ -192,7 +192,7 @@ impl RayTracer {
                     raytracer.input_state.index_of_refraction = ior;
                 }
                 "transparency" => {
-                    todo!("Transparency not implemented yet");
+                    todo!("Transparency not suppoerted");
                     let transparency: Vec<f32> = elements.iter().map(|e| e.parse().unwrap()).collect();
                     raytracer.input_state.transparency = transparency;
                 },
@@ -209,6 +209,10 @@ impl RayTracer {
                     let aperture: f32 = elements[1].parse().unwrap();
                     raytracer.camera.dof = Some(MatVec::new(vec![focal_length, aperture]));
                 },
+                "gi" => {
+                    let gi: u32 = elements[0].parse().unwrap();
+                    raytracer.scene.gi_depth = gi;
+                }
                 _ => {
                     println!("Invalid action: {}", action);
                     std::process::exit(1);
@@ -228,15 +232,21 @@ impl RayTracer {
 
             for y in 0..self.height {
                 
-                let ray = Ray::generate_primary_ray(MatVec::new(vec![x as f32, y as f32]), &self.camera);
-                // print!("Ray: {:?}", ray);
-                // It is ok to do this because a valid ray will always have a normalized direction
-                if ray.direction.eq(MatVec::new(vec![0.0, 0.0, 0.0])) {
+                // let ray = Ray::generate_primary_ray(MatVec::new(vec![x as f32, y as f32]), &self.camera);
+                // // print!("Ray: {:?}", ray);
+                // // It is ok to do this because a valid ray will always have a normalized direction
+                // if ray.direction.eq(MatVec::new(vec![0.0, 0.0, 0.0])) {
+                //     continue;
+                // }
+
+                // let mut pixel_color: RGBA = self.scene.trace_ray(&ray, self.bounce_limit);
+                let pixel_color_optional: Option<RGBA> = self._compute_pixel_value(x, y, self.bounce_limit);
+
+                if pixel_color_optional.is_none() {
                     continue;
                 }
 
-                // let mut pixel_color: RGBA = self.scene.trace_ray(&ray, self.bounce_limit);
-                let mut pixel_color: RGBA = self._compute_pixel_value(x, y, self.bounce_limit);
+                let mut pixel_color = pixel_color_optional.unwrap();
 
                 if self.camera.exposure.is_some() {
 
@@ -259,28 +269,37 @@ impl RayTracer {
     }
 
 
-    fn _compute_pixel_value(&self, pixel_x: u32, pixel_y: u32, bounce_limit: u32) -> RGBA {
+    fn _compute_pixel_value(&self, pixel_x: u32, pixel_y: u32, bounce_limit: u32) -> Option<RGBA> {
 
         if self.anti_aliasing == 0 {
             let ray = Ray::generate_primary_ray(MatVec::new(vec![pixel_x as f32, pixel_y as f32]), &self.camera);
-            return self.scene.trace_ray(&ray, bounce_limit);
+            
+            if ray.direction.eq(MatVec::new(vec![0.0, 0.0, 0.0])) {
+                return None;
+            }
+
+            return Some(self.scene.trace_ray(&ray, bounce_limit));
         }
 
         let mut pixel_color: RGBA = MatVec::new(vec![0.0, 0.0, 0.0, 0.0]);
-
+        let mut num_rays: u32 = 0;
         for _throw in 0..self.anti_aliasing {
 
             let x = pixel_x as f32 + rand::thread_rng().gen_range(-0.5_f32..0.5_f32);
             let y = pixel_y as f32 + rand::thread_rng().gen_range(-0.5_f32..0.5_f32);
 
             let ray = Ray::generate_primary_ray(MatVec::new(vec![x, y]), &self.camera);
+            if ray.direction.eq(MatVec::new(vec![0.0, 0.0, 0.0])) {
+                continue;
+            }
+            num_rays += 1;
             pixel_color = pixel_color + self.scene.trace_ray(&ray, bounce_limit);
         }
 
-        MatVec::new(vec![pixel_color[0] / self.anti_aliasing as f32,
-                        pixel_color[1] / self.anti_aliasing as f32,
-                        pixel_color[2] / self.anti_aliasing as f32,
-                        pixel_color[3] / self.anti_aliasing as f32])
+        Some(MatVec::new(vec![pixel_color[0] / num_rays as f32,
+                        pixel_color[1] / num_rays as f32,
+                        pixel_color[2] / num_rays as f32,
+                        pixel_color[3] / num_rays as f32]))
 
     }
 

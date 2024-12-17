@@ -73,11 +73,13 @@ impl Sphere {
 
 impl SceneObject for Sphere {
 
-    fn propogate(&self, incident: &Ray, intersection: &Intersection) -> Ray {
-        // Implement the logic for propagating the ray through the sphere
-        // This is a placeholder implementation
+    fn propagate(&self, incident: &Ray) -> Ray {
+        // Move the origin slightly outside the sphere along the ray direction
+        let offset = 0.001; // Small offset to move the origin outside the sphere
+        let direction_to_center = (self.center.clone() - incident.origin.clone()).normalize();
+        let new_origin = incident.origin.clone() + (self.radius + offset) * direction_to_center;
         Ray {
-            origin: intersection.point.clone(),
+            origin: new_origin,
             direction: incident.direction.clone(),
         }
     }
@@ -177,7 +179,7 @@ impl Plane {
 
 impl SceneObject for Plane {
 
-    fn propogate(&self, incident: &Ray, intersection: &Intersection) -> Ray {
+    fn propagate(&self, incident: &Ray) -> Ray {
         todo!("not implemented yet");
     }
     
@@ -302,7 +304,7 @@ impl Triangle {
 impl SceneObject for Triangle {
 
 
-    fn propogate(&self, incident: &Ray, intersection: &Intersection) -> Ray {
+    fn propagate(&self, incident: &Ray) -> Ray {
         todo!("not implemented yet");
     }
 

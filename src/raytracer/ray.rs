@@ -2,6 +2,8 @@ use crate::raytracer::{CameraState, Intersection, MatVec, ProjectionType};
 use crate::raytracer::scene::LightSource;
 use rand::Rng;
 
+use super::scene::SceneObject;
+
 /// Represents a ray in 3D space.
 /// The actual creating of rays is done through the
 /// static methods implemented on this struct.
@@ -39,13 +41,17 @@ impl Ray {
                 let eye: MatVec<3> = context.eye.clone();
                 let forward: MatVec<3> = context.forward.clone();
 
-                let arbitrary_up = context.up.clone().normalize();
+                let arbitrary_up = if *context.up.get(1) < 0.0 {
+                    MatVec::new(vec![0.0, -1.0, 0.0])
+                } else {
+                    MatVec::new(vec![0.0, 1.0, 0.0])
+                };
 
                 // Compute the right vector
-                let right: MatVec<3> = forward.cross(&arbitrary_up).normalize();
+                let right: MatVec<3> = (forward.normalize()).cross(&arbitrary_up).normalize();
 
                 // Compute the proper up vector to ensure orthonormality
-                let up: MatVec<3> = right.cross(&forward).normalize();
+                let up: MatVec<3> = right.cross(&forward.normalize()).normalize();
 
                 // Construct the ray direction
                 let mut ray = Ray::new(eye.clone(), (forward + (s_x * right) + (s_y * up)).normalize());
@@ -121,15 +127,6 @@ impl Ray {
         Ray::new(origin, dir)
     }
 
-    // /// Phong reflection model
-    // pub fn generate_reflection_ray(intersection: &Intersection, incoming_ray: &Ray) -> Ray {
-    //     let origin = intersection.point.clone();
-    //     let normal = intersection.normal.clone();
-    //     let direction = incoming_ray.direction.clone();
-    //     let reflection = direction  - 2.0 * direction.dot(normal) * normal;
-    //
-    //     Ray::new(origin, reflection.normalize())
-    // }
 
     /// Phong reflection model
     pub fn generate_reflection_ray(intersection: &Intersection, incoming_ray: &Ray) -> Ray {
@@ -150,14 +147,14 @@ impl Ray {
     }
 
 
-    pub fn generate_refraction_ray(intersection: &Intersection, incoming_ray: &Ray, ior: f32) -> Ray {
+    pub fn generate_refraction_ray(intersection: &Intersection, incoming_ray: &Ray, shape: &Box<dyn SceneObject>) -> Ray {
         let mut normal = intersection.normal.clone();
-        let mut eta = 1.0 / ior; // Assume ray is entering the material
+        let mut eta = 1.0 / shape.ior(); // Assume ray is entering the material
 
         // Check if the ray is exiting the material
         if incoming_ray.direction.dot(normal) > 0.0 {
             normal = -1.0f32 * normal;
-            eta = ior;
+            eta = shape.ior();
         }
 
         let cos_i = -normal.dot(incoming_ray.direction.clone()).clamp(-1.0, 1.0);
@@ -169,8 +166,30 @@ impl Ray {
         }
 
         let cos_t = (1.0 - sin_t2).sqrt();
-        let refraction = eta * incoming_ray.direction + (eta * cos_i - cos_t) * normal;
-        let origin = intersection.point.clone();
-        Ray::new(origin, refraction.normalize())
+        let refraction_direction = eta * incoming_ray.direction + (eta * cos_i - cos_t) * normal;
+
+        // Find the exit point of the ray through the object
+        let exit_intersection = shape.intersect(&Ray::new(intersection.point.clone(), refraction_direction.clone().normalize())).unwrap();
+        let exit_point = exit_intersection.point;
+        let exit_normal = exit_intersection.normal;
+
+        // At the exit point, invert eta for material-to-air transition
+        let exit_eta = 1.0 / shape.ior();
+        let exit_cos_i = -exit_normal.dot(refraction_direction).clamp(-1.0, 1.0);
+        let exit_sin_t2 = exit_eta * exit_eta * (1.0 - exit_cos_i * exit_cos_i);
+
+        // Total internal reflection check at the exit point
+        if exit_sin_t2 <= 1.0 {
+            let exit_cos_t = (1.0 - exit_sin_t2).sqrt();
+            let exit_refraction_direction = exit_eta * refraction_direction + (exit_eta * exit_cos_i - exit_cos_t) * exit_normal;
+            return Ray::new(exit_point, exit_refraction_direction);
+        } else {
+            return Ray::new(exit_point, refraction_direction.normalize());
+        }
+
+
+        // Ray::new(exit_point, refraction_direction.normalize())
+
+        // Ray::new(exit_point, refraction_direction.normalize())
     }
 }

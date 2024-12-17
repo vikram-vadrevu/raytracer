@@ -1,14 +1,13 @@
 exposure
 suns
-# camera
+camera
 lenses
 plane
 triangle
 map
 barycentric
 bulb
-reflect
-# refract         
+reflect      
 rough
 antialias
 focus

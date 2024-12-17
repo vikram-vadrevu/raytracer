@@ -1,4 +1,5 @@
 use crate::raytracer::{Intersection, IntersectionPayload, MatVec, RGBA, Color, LightResidual};
+use rand::Rng;
 use crate::raytracer::ray::Ray;
 use crate::raytracer::utils;
 
@@ -10,11 +11,11 @@ pub trait SceneObject {
     fn intersect(&self, ray: &Ray) -> IntersectionPayload;
     fn color_at(&self, point: &MatVec<3>) -> Color;
 
-    // TODO: Restructure these things to be propogated by the Objects themselves
+    // TODO: Restructure these things to be propagated by the Objects themselves
     // IE I want the computations to be handled by each implementation of the SceneObject trait
 
     // add normal, and apply roughness to the normal
-    fn propogate(&self, incident: &Ray, intersection: &Intersection) -> Ray;
+    fn propagate(&self, incident: &Ray) -> Ray;
     fn shininess(&self) -> Option<Vec<f32>> { None }
     fn transparency(&self) -> Option<Vec<f32>> { None }
     // fn roughness(&self) -> Option<f32> { None }
@@ -48,7 +49,8 @@ pub trait Material {
 pub struct Scene {
     pub shapes: Vec<Box<dyn SceneObject>>,
     // pub materials: Vec<Material>,
-    pub light_sources: Vec<Box<dyn LightSource>>
+    pub light_sources: Vec<Box<dyn LightSource>>,
+    pub gi_depth: u32
 }
 
 impl Scene {
@@ -57,7 +59,8 @@ impl Scene {
         Scene {
             shapes: Vec::new(),
             // materials: Vec::new(),
-            light_sources: Vec::new()
+            light_sources: Vec::new(),
+            gi_depth: 0,
         }
     }
 
@@ -139,7 +142,7 @@ impl Scene {
 
             // Bias the origin if the intesection belongs to this shape
             if intersection.shape_id.unwrap() == i {
-                local_ray.origin = local_ray.origin.clone() + 0.055f32 * local_ray.direction.clone();
+                local_ray.origin = local_ray.origin.clone() + 0.065f32 * local_ray.direction.clone();
             }
 
             let mut intersection: IntersectionPayload = shape.intersect(&local_ray);
@@ -177,11 +180,11 @@ impl Scene {
     /// of the primary ray and its collision in the scene.
     /// Utilizes the `_recursive_raytrace` method to handle recursive raytracing.
     pub fn trace_ray(&self, ray: &Ray, bounce_limit: u32) -> RGBA {
-        self._recursive_raytrace(ray,  &None, bounce_limit)
+        self._recursive_raytrace(ray,  &None, bounce_limit, self.gi_depth)
     }
 
     /// Recursive implementation of raytracing, with support for reflections and transparency.
-    fn _recursive_raytrace(&self, ray: &Ray, optional_intersection: &IntersectionPayload, bounce_limit: u32) -> RGBA {
+    fn _recursive_raytrace(&self, ray: &Ray, optional_intersection: &IntersectionPayload, bounce_limit: u32, gi_depth: u32) -> RGBA {
         // cast primary ray
 
         let primary_colision: IntersectionPayload = self.find_minimum_intersection_with_point(ray, &optional_intersection);
@@ -197,7 +200,30 @@ impl Scene {
         let shape_id: usize = colision.shape_id.unwrap();
         let mut color: Color = self.shapes[shape_id].color_at(&colision.point);
 
-        let ilumination_sources: Vec<LightResidual> = self._find_light_sources(&colision);
+        let mut ilumination_sources: Vec<LightResidual> = self._find_light_sources(&colision);
+        
+        // Apply global illumination
+        // In _recursive_raytrace method
+        if gi_depth > 0 {
+            let random_direction = self.generate_random_direction_in_hemisphere(&colision.normal);
+            let gi_ray = Ray::new(
+            colision.point + colision.normal * 0.001, // Offset to avoid self-intersection
+            random_direction,
+            );
+
+            let gi_color = utils::rgba_to_color(self._recursive_raytrace(&gi_ray, &None, bounce_limit, gi_depth - 1));
+            // let weight = random_direction.dot(colision.normal).max(0.0); // Importance weight
+            // for i in 0..3 {
+            // color.set(i, color[i] + weight * gi_color[i] * 0.5); // Scaled blending
+            ilumination_sources.push(LightResidual {
+                source_id: None,
+                color: gi_color,
+                intensity: 1.0_f32,
+                direction: random_direction,
+                normal: random_direction.cross(&colision.normal).normalize(),
+            });
+        }
+
 
         // In a shadow, return black
         if ilumination_sources.is_empty() {
@@ -217,27 +243,22 @@ impl Scene {
             // Handle reflections
             if shininess.iter().any(|&s| s > 0.0) {
                 let reflection_ray = Ray::generate_reflection_ray(&colision.clone(), ray);
-                reflection_color = utils::rgba_to_color(self._recursive_raytrace(&reflection_ray, &Some(colision.clone()), bounce_limit - 1));
+                reflection_color = utils::rgba_to_color(self._recursive_raytrace(&reflection_ray, &Some(colision.clone()), bounce_limit - 1, gi_depth));
 
-                // // Combine reflection color with base color using per-channel shininess
-                // for i in 0..3 {
-                //     color.set(i, (1.0 - shininess[i]) * color[i] + shininess[i] * reflection_color[i]);
-                // }
             }
 
             // Handle refractions
             // TODO: Make sure that tranceparency is suppoed to be double applies on the in and out
-            if transparency.iter().any(|&t| t > 0.0) {
-                let mut refraction_ray = Ray::generate_refraction_ray(&colision, ray, self.shapes[shape_id].ior());
-                // utils::in_place_propogate(&mut refraction_ray);
-                let pass_through_intersection = self.find_minimum_intersection_with_point(&refraction_ray, &Some(colision.clone()));
-                refraction_color = utils::rgba_to_color(self._recursive_raytrace(&refraction_ray, &Some(colision.clone()), bounce_limit - 1));
+            // if transparency.iter().any(|&t| t > 0.0) {
+            //     let mut refraction_ray = Ray::generate_refraction_ray(&colision, ray, &self.shapes[shape_id]);
+            //     // utils::in_place_propagate(&mut refraction_ray, self.shapes[shape_id]);
 
-                // Combine refraction color with base color using per-channel transparency
-                // for i in 0..3 {
-                //     color.set(i, (1.0 - shininess[i]) * ((1.0 - transparency[i]) * color[i] + transparency[i] * refraction_color[i]));
-                // }
-            }
+            //     // refraction_ray = self.shapes[shape_id].propagate(&refraction_ray);
+            //     // let pass_through_intersection = self.find_minimum_intersection_with_point(&refraction_ray, &Some(colision.clone()));
+
+            //     refraction_color = utils::rgba_to_color(self._recursive_raytrace(&refraction_ray, &Some(colision.clone()), bounce_limit - 1, gi_depth));
+
+            // }
         }
 
         // Apply Lambertian shading
@@ -280,5 +301,40 @@ impl Scene {
         light_sources
 
     }
+
+
+    fn generate_random_direction_in_hemisphere(&self, normal: &MatVec<3>) -> MatVec<3> {
+        let mut rng = rand::thread_rng();
+    
+        // Generate random spherical coordinates using cosine-weighted sampling
+        let r1: f32 = rng.gen();
+        let r2: f32 = rng.gen();
+        let theta = 2.0 * std::f32::consts::PI * r1;
+        let sqrt_r2 = r2.sqrt();
+    
+        let x = theta.cos() * sqrt_r2;
+        let y = theta.sin() * sqrt_r2;
+        let z = (1.0 - r2).sqrt();
+    
+        let local_dir = MatVec::new(vec![x, y, z]);
+    
+        // Transform local direction to world space
+        let uz = normal.normalize();
+        let ux = if normal[0].abs() > 0.1 {
+            MatVec::new(vec![-normal[1], normal[0], 0.0]).normalize()
+        } else {
+            MatVec::new(vec![0.0, -normal[2], normal[1]]).normalize()
+        };
+        let uy = uz.cross(&ux);
+    
+        MatVec::new(vec![
+            ux.dot(local_dir),
+            uy.dot(local_dir),
+            uz.dot(local_dir),
+        ])
+    }
+    
+    
+
 
 }
